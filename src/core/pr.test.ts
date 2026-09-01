@@ -64,8 +64,9 @@ describe("parseDiff", () => {
 		expect(lines[4]).toMatchObject({ type: "context", old: 3, new: 4 });
 	});
 
-	test("hunk header text survives", () => {
+	test("hunk header text and range survive", () => {
 		expect(files[0].hunks[0].header).toBe("header text");
+		expect(files[0].hunks[0].range).toBe("-1,4 +1,5");
 	});
 
 	test("no-newline marker is not a line", () => {

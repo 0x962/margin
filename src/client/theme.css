@@ -25,10 +25,10 @@
 	--shadow: 0 4px 24px rgba(16, 18, 27, 0.14);
 	--shadow-sm: 0 1px 2px rgba(16, 18, 27, 0.05);
 
-	--add-bg: rgba(53, 129, 90, 0.09);
-	--add-num: rgba(53, 129, 90, 0.16);
-	--del-bg: rgba(182, 84, 84, 0.09);
-	--del-num: rgba(182, 84, 84, 0.16);
+	--add-bg: rgba(53, 129, 90, 0.13);
+	--add-num: rgba(53, 129, 90, 0.22);
+	--del-bg: rgba(182, 84, 84, 0.13);
+	--del-num: rgba(182, 84, 84, 0.22);
 
 	--hl-keyword: #9d4a9d;
 	--hl-string: #2f6f44;
@@ -59,17 +59,17 @@
 		--shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 		--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
 
-		--add-bg: rgba(77, 148, 116, 0.13);
-		--add-num: rgba(77, 148, 116, 0.22);
-		--del-bg: rgba(194, 101, 98, 0.12);
-		--del-num: rgba(194, 101, 98, 0.2);
+		--add-bg: rgba(77, 148, 116, 0.18);
+		--add-num: rgba(77, 148, 116, 0.3);
+		--del-bg: rgba(194, 101, 98, 0.16);
+		--del-num: rgba(194, 101, 98, 0.28);
 
-		--hl-keyword: #c586c0;
-		--hl-string: #89b98c;
-		--hl-comment: #6b6f79;
-		--hl-number: #d19a66;
-		--hl-title: #82aaff;
-		--hl-attr: #d7ba7d;
+		--hl-keyword: #d99fd4;
+		--hl-string: #98c986;
+		--hl-comment: #7d828e;
+		--hl-number: #e0a878;
+		--hl-title: #8ab4ff;
+		--hl-attr: #e2c78a;
 
 		color-scheme: dark;
 	}
@@ -93,17 +93,17 @@
 	--shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
 
-	--add-bg: rgba(77, 148, 116, 0.13);
-	--add-num: rgba(77, 148, 116, 0.22);
-	--del-bg: rgba(194, 101, 98, 0.12);
-	--del-num: rgba(194, 101, 98, 0.2);
+	--add-bg: rgba(77, 148, 116, 0.18);
+	--add-num: rgba(77, 148, 116, 0.3);
+	--del-bg: rgba(194, 101, 98, 0.16);
+	--del-num: rgba(194, 101, 98, 0.28);
 
-	--hl-keyword: #c586c0;
-	--hl-string: #89b98c;
-	--hl-comment: #6b6f79;
-	--hl-number: #d19a66;
-	--hl-title: #82aaff;
-	--hl-attr: #d7ba7d;
+	--hl-keyword: #d99fd4;
+	--hl-string: #98c986;
+	--hl-comment: #7d828e;
+	--hl-number: #e0a878;
+	--hl-title: #8ab4ff;
+	--hl-attr: #e2c78a;
 
 	color-scheme: dark;
 }
@@ -235,6 +235,30 @@ textarea.input:focus {
 }
 .input::placeholder {
 	color: var(--text-faint);
+}
+
+.seg {
+	display: inline-flex;
+	background: var(--panel-2);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: 2px;
+	gap: 2px;
+}
+.seg button {
+	border: 0;
+	background: transparent;
+	color: var(--text-dim);
+	font-size: 12px;
+	font-weight: 500;
+	padding: 3px 10px;
+	border-radius: 4px;
+	cursor: pointer;
+}
+.seg button.on {
+	background: var(--panel);
+	color: var(--text);
+	box-shadow: var(--shadow-sm);
 }
 
 .panel-label {

@@ -3,8 +3,11 @@ import { Fragment, useMemo, useState } from "react";
 import type { Comment, DiffFile, DiffLine } from "../../core/types";
 import { languageOf, highlightLine } from "../hl";
 import { api, toast, useIdentity } from "../lib";
+import { pairLines } from "../tree";
 import { Composer } from "./Composer";
 import { Thread } from "./Thread";
+
+export type DiffView = "unified" | "split";
 
 function statusChip(f: DiffFile): { word: string; cls: string } | null {
 	if (f.status === "added") return { word: "added", cls: "added" };
@@ -24,9 +27,15 @@ function lineKey(l: DiffLine): string | null {
 	return null;
 }
 
+interface Anchor {
+	side: "old" | "new";
+	line: number;
+}
+
 export function DiffFileCard({
 	file,
 	pr,
+	view,
 	comments,
 	author,
 	onChanged,
@@ -34,15 +43,17 @@ export function DiffFileCard({
 }: {
 	file: DiffFile;
 	pr: string;
+	view: DiffView;
 	comments: Comment[];
 	author: string;
 	onChanged: (comments: Comment[]) => void;
 	refCb: (el: HTMLDivElement | null) => void;
 }) {
 	const [collapsed, setCollapsed] = useState(false);
-	const [composerAt, setComposerAt] = useState<{ side: "old" | "new"; line: number } | null>(null);
+	const [composerAt, setComposerAt] = useState<Anchor | null>(null);
 	const setAuthor = useIdentity((s) => s.set);
 	const language = useMemo(() => languageOf(file.path), [file.path]);
+	const cols = view === "split" ? 4 : 3;
 
 	const byAnchor = useMemo(() => {
 		const map = new Map<string, Comment[]>();
@@ -70,7 +81,7 @@ export function DiffFileCard({
 	const chip = statusChip(file);
 	const refresh = () => api.comments(pr).then(onChanged, () => {});
 
-	const submitAt = async (side: "old" | "new", line: number, body: string) => {
+	const submitAt = async (at: Anchor, body: string) => {
 		let name = author;
 		if (!name) {
 			name = window.prompt("Your name (shown on the comment):")?.trim() ?? "";
@@ -80,10 +91,102 @@ export function DiffFileCard({
 			}
 			setAuthor(name);
 		}
-		await api.add(pr, { path: file.path, side, line, body, author: name });
+		await api.add(pr, { path: file.path, side: at.side, line: at.line, body, author: name });
 		setComposerAt(null);
 		await refresh();
 	};
+
+	const isAt = (at: Anchor) => composerAt?.side === at.side && composerAt.line === at.line;
+
+	const addBtn = (at: Anchor) => (
+		<button
+			type="button"
+			className="add-comment"
+			title="Comment on this line"
+			onClick={() => setComposerAt(isAt(at) ? null : at)}
+		>
+			<MessageSquarePlus size={12} />
+		</button>
+	);
+
+	const code = (l: DiffLine) => (
+		<span
+			className="code-text"
+			// highlight.js output over escaped text; never raw file content
+			dangerouslySetInnerHTML={{ __html: highlightLine(l.text, language) }}
+		/>
+	);
+
+	/** Threads and the composer for the anchors this row shows. */
+	const anchorRow = (keys: Anchor[]) => {
+		const threads = keys.flatMap((k) => byAnchor.get(anchorKey(k.side, k.line)) ?? []);
+		const composing = keys.find((k) => isAt(k));
+		if (threads.length === 0 && !composing) return null;
+		return (
+			<tr className="anchor-row">
+				<td className="num" />
+				<td className="anchor-cell" colSpan={cols - 1}>
+					{threads.map((c) => (
+						<Thread key={c.id} pr={pr} comment={c} onChanged={onChanged} />
+					))}
+					{composing && (
+						<Composer
+							placeholder={`Comment on ${file.path.split("/").pop()}:${composing.line}`}
+							submitLabel="Comment"
+							autoFocus
+							onCancel={() => setComposerAt(null)}
+							onSubmit={(body) => submitAt(composing, body)}
+						/>
+					)}
+				</td>
+			</tr>
+		);
+	};
+
+	const unifiedRows = (lines: DiffLine[]) =>
+		lines.map((l, li) => {
+			const side: "old" | "new" = l.new !== null ? "new" : "old";
+			const at: Anchor = { side, line: (l.new ?? l.old)! };
+			return (
+				<Fragment key={li}>
+					<tr className={`line ${l.type}`}>
+						<td className="num old">{l.old ?? ""}</td>
+						<td className="num new">{l.new ?? ""}</td>
+						<td className="code">
+							{addBtn(at)}
+							{code(l)}
+						</td>
+					</tr>
+					{anchorRow([at])}
+				</Fragment>
+			);
+		});
+
+	const splitRows = (lines: DiffLine[]) =>
+		pairLines(lines).map((row, ri) => {
+			const anchors: Anchor[] = [];
+			// A context line lives on both sides but takes one anchor, on the
+			// new side; only a deletion anchors to the old side.
+			if (row.left && row.left.type === "del") anchors.push({ side: "old", line: row.left.old! });
+			if (row.right && row.right.new !== null) anchors.push({ side: "new", line: row.right.new });
+			return (
+				<Fragment key={ri}>
+					<tr className="line split">
+						<td className={`num old ${row.left?.type === "del" ? "in-del" : ""}`}>{row.left?.old ?? ""}</td>
+						<td className={`code half ${row.left ? (row.left.type === "del" ? "cl-del" : "") : "cl-empty"}`}>
+							{row.left && row.left.type === "del" && addBtn({ side: "old", line: row.left.old! })}
+							{row.left && code(row.left)}
+						</td>
+						<td className={`num new ${row.right?.type === "add" ? "in-add" : ""}`}>{row.right?.new ?? ""}</td>
+						<td className={`code half ${row.right ? (row.right.type === "add" ? "cl-add" : "") : "cl-empty"}`}>
+							{row.right && row.right.new !== null && addBtn({ side: "new", line: row.right.new })}
+							{row.right && code(row.right)}
+						</td>
+					</tr>
+					{anchorRow(anchors)}
+				</Fragment>
+			);
+		});
 
 	return (
 		<div className="dfile" ref={refCb}>
@@ -103,65 +206,18 @@ export function DiffFileCard({
 			{!collapsed && !file.binary && file.hunks.length === 0 && <div className="dfile-empty">No text changes.</div>}
 
 			{!collapsed && !file.binary && (
-				<table className="diff">
+				<table className={`diff ${view}`}>
 					<tbody>
 						{file.hunks.map((hunk, hi) => (
 							<Fragment key={hi}>
 								<tr className="hunk-row">
 									<td className="num" />
-									<td className="num" />
-									<td className="code hunk">{hunk.header || " "}</td>
+									<td className="code hunk" colSpan={cols - 1}>
+										<span className="hunk-range">@@ {hunk.range}</span>
+										{hunk.header && <span className="hunk-ctx">{hunk.header}</span>}
+									</td>
 								</tr>
-								{hunk.lines.map((l, li) => {
-									const key = lineKey(l);
-									const anchored = key ? (byAnchor.get(key) ?? []) : [];
-									const side: "old" | "new" = l.new !== null ? "new" : "old";
-									const line = (l.new ?? l.old)!;
-									const here = composerAt && composerAt.side === side && composerAt.line === line;
-									return (
-										<Fragment key={li}>
-											<tr className={`line ${l.type}`}>
-												<td className="num old">{l.old ?? ""}</td>
-												<td className="num new">{l.new ?? ""}</td>
-												<td className="code">
-													<button
-														type="button"
-														className="add-comment"
-														title="Comment on this line"
-														onClick={() => setComposerAt(here ? null : { side, line })}
-													>
-														<MessageSquarePlus size={12} />
-													</button>
-													<span
-														className="code-text"
-														// highlight.js output over escaped text; never raw file content
-														dangerouslySetInnerHTML={{ __html: highlightLine(l.text, language) }}
-													/>
-												</td>
-											</tr>
-											{(anchored.length > 0 || here) && (
-												<tr className="anchor-row">
-													<td className="num" />
-													<td className="num" />
-													<td className="anchor-cell">
-														{anchored.map((c) => (
-															<Thread key={c.id} pr={pr} comment={c} onChanged={onChanged} />
-														))}
-														{here && (
-															<Composer
-																placeholder={`Comment on ${file.path.split("/").pop()}:${line}`}
-																submitLabel="Comment"
-																autoFocus
-																onCancel={() => setComposerAt(null)}
-																onSubmit={(body) => submitAt(side, line, body)}
-															/>
-														)}
-													</td>
-												</tr>
-											)}
-										</Fragment>
-									);
-								})}
+								{view === "split" ? splitRows(hunk.lines) : unifiedRows(hunk.lines)}
 							</Fragment>
 						))}
 					</tbody>

@@ -60,6 +60,9 @@ export interface DiffLine {
 }
 
 export interface DiffHunk {
+	/** The @@ ranges, e.g. "-1,4 +1,5". */
+	range: string;
+	/** The context git prints after the second @@, often a function name. */
 	header: string;
 	lines: DiffLine[];
 }

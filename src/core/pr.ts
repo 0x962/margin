@@ -76,11 +76,11 @@ export function parseDiff(text: string): DiffFile[] {
 		else if (line.startsWith("rename to")) file.path = stripPrefix(`b/${line.slice("rename to ".length)}`);
 		else if (line.startsWith("Binary files") || line.startsWith("GIT binary patch")) file.binary = true;
 
-		const at = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@ ?(.*)$/.exec(line);
+		const at = /^@@ (-\d+(?:,\d+)?) (\+\d+(?:,\d+)?) @@ ?(.*)$/.exec(line);
 		if (at) {
-			oldN = Number(at[1]);
-			newN = Number(at[2]);
-			hunk = { header: at[3], lines: [] };
+			oldN = Number.parseInt(at[1].slice(1), 10);
+			newN = Number.parseInt(at[2].slice(1), 10);
+			hunk = { range: `${at[1]} ${at[2]}`, header: at[3], lines: [] };
 			file.hunks.push(hunk);
 			continue;
 		}

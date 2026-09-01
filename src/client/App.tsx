@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { parsePrRef } from "../core/pr";
 import type { Comment } from "../core/types";
 import { api, timeAgo, useIdentity, useToasts, type PrPayload } from "./lib";
-import { DiffFileCard } from "./components/DiffFileCard";
+import { DiffFileCard, type DiffView } from "./components/DiffFileCard";
+import { FileTree } from "./components/FileTree";
 import { IdentityMenu } from "./components/IdentityMenu";
 
 function Toasts() {
@@ -84,8 +85,15 @@ function Review({ pr }: { pr: string }) {
 	const [error, setError] = useState<string | null>(null);
 	const [comments, setComments] = useState<Comment[]>([]);
 	const [refreshing, setRefreshing] = useState(false);
+	const [view, setView] = useState<DiffView>(
+		(localStorage.getItem("margin:view") as DiffView) === "split" ? "split" : "unified",
+	);
 	const author = useIdentity((s) => s.author);
 	const fileRefs = useRef(new Map<string, HTMLDivElement>());
+	const pickView = (v: DiffView) => {
+		localStorage.setItem("margin:view", v);
+		setView(v);
+	};
 
 	const load = async (fresh = false) => {
 		try {
@@ -159,6 +167,13 @@ function Review({ pr }: { pr: string }) {
 				</span>
 				<span className={`state-chip ${chip.cls}`}>{chip.word}</span>
 				<span className="spacer" />
+				<div className="seg">
+					{(["unified", "split"] as DiffView[]).map((v) => (
+						<button key={v} type="button" className={view === v ? "on" : ""} onClick={() => pickView(v)}>
+							{v === "unified" ? "Unified" : "Split"}
+						</button>
+					))}
+				</div>
 				<span className="head-stat">
 					<b>{open}</b> open
 					{resolved > 0 && (
@@ -190,24 +205,7 @@ function Review({ pr }: { pr: string }) {
 					<div className="panel-label">
 						Files <span className="dim">{data.files.length}</span>
 					</div>
-					<div className="file-list">
-						{data.files.map((f) => {
-							const list = byFile.get(f.path) ?? [];
-							const openHere = list.filter((c) => c.status === "open").length;
-							return (
-								<button type="button" key={f.path} className="file-row" onClick={() => scrollTo(f.path)}>
-									<span className="file-name" title={f.path}>
-										{f.path.split("/").pop()}
-									</span>
-									{openHere > 0 && <span className="file-open">{openHere}</span>}
-									<span className="file-delta">
-										{f.additions > 0 && <em className="plus">+{f.additions}</em>}
-										{f.deletions > 0 && <em className="minus">−{f.deletions}</em>}
-									</span>
-								</button>
-							);
-						})}
-					</div>
+					<FileTree files={data.files} byFile={byFile} onPick={(path) => scrollTo(path)} />
 					{comments.length > 0 && (
 						<>
 							<div className="panel-label">Comments</div>
@@ -237,6 +235,7 @@ function Review({ pr }: { pr: string }) {
 							key={f.path}
 							file={f}
 							pr={pr}
+							view={view}
 							comments={byFile.get(f.path) ?? []}
 							author={author}
 							onChanged={setComments}
