@@ -8,6 +8,8 @@ export interface PrPayload {
 	url: string;
 	meta: PrMeta;
 	files: DiffFile[];
+	/** Where a review of this PR runs: the branch's worktree, else the main checkout. */
+	cwd: string | null;
 	comments: Comment[];
 	error?: string;
 }

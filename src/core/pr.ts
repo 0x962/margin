@@ -130,6 +130,32 @@ export async function setAutoDeploy(ref: PrRef, enabled: boolean): Promise<void>
 	]);
 }
 
+/**
+ * Where a review of this PR should run: the worktree that has the PR's
+ * branch checked out, found by asking the repo's main checkout (worktrees
+ * share its .git, wherever they live on disk). Falls back to the main
+ * checkout itself; null when the repo has no local checkout at all.
+ */
+export async function resolveReviewCwd(ref: PrRef, headRefName: string): Promise<string | null> {
+	const { homedir } = await import("node:os");
+	const { existsSync } = await import("node:fs");
+	const root = `${homedir()}/projects/${ref.repo}`;
+	if (!existsSync(root)) return null;
+	const proc = Bun.spawn({
+		cmd: ["git", "-C", root, "worktree", "list", "--porcelain"],
+		stdout: "pipe",
+		stderr: "ignore",
+	});
+	const out = await new Response(proc.stdout).text();
+	if ((await proc.exited) !== 0) return root;
+	let current: string | null = null;
+	for (const line of out.split("\n")) {
+		if (line.startsWith("worktree ")) current = line.slice("worktree ".length);
+		else if (line === `branch refs/heads/${headRefName}` && current) return current;
+	}
+	return root;
+}
+
 /** The signed-in user's open pull requests, for the title switcher. */
 export async function fetchMyOpenPrs(): Promise<
 	Array<{ owner: string; repo: string; number: number; title: string; isDraft: boolean }>

@@ -1634,3 +1634,61 @@ a.lb-value:hover {
 	max-width: 56vw;
 	justify-content: center;
 }
+
+/* ---------- github-style threads ---------- */
+
+.thread {
+	padding: 0;
+	border-left: 1px solid var(--border);
+	overflow: hidden;
+}
+.cm-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 7px 12px;
+	background: #101113;
+	border-bottom: 1px solid #17181b;
+}
+.cm-body {
+	padding: 10px 12px;
+}
+.cm.reply {
+	margin: 0;
+	padding: 0;
+	border-left: 0;
+	border-top: 1px solid var(--border);
+}
+.thread-foot {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	margin-top: 0;
+	border-top: 1px solid var(--border);
+	background: #0c0d0f;
+}
+.thread-foot .composer {
+	flex: 1;
+	margin-top: 0;
+}
+.reply-box {
+	flex: 1;
+	height: 28px;
+	padding: 0 11px;
+	text-align: left;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: var(--bg);
+	color: var(--text-faint);
+	font-size: 12.5px;
+	font-family: inherit;
+	cursor: text;
+}
+.reply-box:hover {
+	border-color: var(--border-strong);
+}
+.btn.resolve:hover {
+	color: var(--ok);
+	border-color: color-mix(in srgb, var(--ok) 45%, var(--border));
+}

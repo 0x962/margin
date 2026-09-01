@@ -166,21 +166,14 @@ function Review({ pr }: { pr: string }) {
 	}, [pr, liveBranch?.supported, liveBranch?.enabled, liveBranch?.pod]);
 
 	// A host app embedding this page as a tab reads the document title and
-	// favicon: the tab is the PR number, and the icon carries its status.
+	// favicon: the tab is the PR number, and the icon carries its status,
+	// served from the stable per-PR favicon URL so every surface agrees.
 	useEffect(() => {
 		if (!data) return;
 		document.title = `#${data.ref.number}`;
-		const state = data.meta.isDraft
-			? "#8a8f98"
-			: data.meta.state.toLowerCase() === "merged"
-				? "#a48ff0"
-				: data.meta.state.toLowerCase() === "open"
-					? "#22d39a"
-					: "#f16682";
-		const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${state}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="3"/><path d="M5 9v12"/><circle cx="19" cy="18" r="3"/><path d="M15 9l-3-3 3-3"/><path d="M12 6h4a3 3 0 0 1 3 3v6"/></svg>`;
 		const link = document.querySelector('link[rel="icon"]') as HTMLLinkElement | null;
 		const prev = link?.href ?? null;
-		if (link) link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+		if (link) link.href = `/pr-favicon/${data.ref.owner}/${data.ref.repo}/${data.ref.number}.svg`;
 		return () => {
 			document.title = "margin — local review";
 			if (link && prev) link.href = prev;
@@ -385,7 +378,7 @@ function Review({ pr }: { pr: string }) {
 				</div>
 			)}
 
-			{tab === "review" && <ReviewTab pr={pr} repo={data.ref.repo} />}
+			{tab === "review" && <ReviewTab pr={pr} cwd={data.cwd} />}
 
 			{tab === "ci" && (
 				<div className="tabfull">

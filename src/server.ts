@@ -9,6 +9,7 @@ import {
 	fetchMyOpenPrs,
 	getAutoDeploy,
 	parsePrRef,
+	resolveReviewCwd,
 	runPrAction,
 	setAutoDeploy,
 	type PrAction,
@@ -31,14 +32,38 @@ const PORT = Number(process.env.MARGIN_PORT ?? 4519);
 
 /** The diff and title change rarely while a review is open; one minute is fresh enough. */
 const CACHE_MS = 60_000;
-const prCache = new Map<string, { at: number; meta: PrMeta; files: DiffFile[] }>();
+const prCache = new Map<string, { at: number; meta: PrMeta; files: DiffFile[]; cwd: string | null }>();
+
+/** Meta alone, for the favicon route: cheap enough to keep separately fresh. */
+const metaCache = new Map<string, { at: number; meta: PrMeta }>();
+async function loadMeta(ref: PrRef): Promise<PrMeta> {
+	const key = prKey(ref);
+	const hit = metaCache.get(key);
+	if (hit && Date.now() - hit.at < CACHE_MS) return hit.meta;
+	const meta = await fetchMeta(ref);
+	metaCache.set(key, { at: Date.now(), meta });
+	return meta;
+}
+
+function statusColor(meta: PrMeta): string {
+	if (meta.isDraft) return "#8a8f98";
+	const s = meta.state.toLowerCase();
+	if (s === "merged") return "#a48ff0";
+	if (s === "open") return "#22d39a";
+	return "#f16682";
+}
+
+function prFaviconSvg(color: string): string {
+	return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="3"/><path d="M5 9v12"/><circle cx="19" cy="18" r="3"/><path d="M15 9l-3-3 3-3"/><path d="M12 6h4a3 3 0 0 1 3 3v6"/></svg>`;
+}
 
 async function loadPr(ref: PrRef, fresh: boolean) {
 	const key = prKey(ref);
 	const hit = prCache.get(key);
 	if (!fresh && hit && Date.now() - hit.at < CACHE_MS) return hit;
 	const [meta, files] = await Promise.all([fetchMeta(ref), fetchDiff(ref)]);
-	const entry = { at: Date.now(), meta, files };
+	const cwd = await resolveReviewCwd(ref, meta.headRefName);
+	const entry = { at: Date.now(), meta, files, cwd };
 	prCache.set(key, entry);
 	return entry;
 }
@@ -82,6 +107,25 @@ const server = Bun.serve({
 				defaultIcon: m.file ?? "file",
 			});
 		},
+		// A stable, status-colored favicon URL per PR: a host app seeds its tab
+		// icon with this before the page ever loads.
+		"/pr-favicon/:owner/:repo/:number": async (req) => {
+			const { owner, repo, number } = req.params;
+			const ref = { owner, repo, number: Number(number.replace(/\.svg$/, "")) };
+			if (!ref.owner || !ref.repo || !Number.isFinite(ref.number)) {
+				return new Response("bad ref", { status: 400 });
+			}
+			let color = "#8a8f98";
+			try {
+				color = statusColor(await loadMeta(ref));
+			} catch {
+				// GitHub unreachable: the neutral glyph still beats a broken image.
+			}
+			return new Response(prFaviconSvg(color), {
+				headers: { "content-type": "image/svg+xml", "cache-control": "max-age=60" },
+			});
+		},
+
 		"/file-icons/:name": (req) => {
 			const name = req.params.name;
 			if (!/^[\w.-]+\.svg$/.test(name)) return new Response("bad name", { status: 400 });
@@ -102,8 +146,8 @@ const server = Bun.serve({
 			const url = new URL(req.url);
 			const ref = refFromQuery(url);
 			try {
-				const { meta, files } = await loadPr(ref, url.searchParams.get("fresh") === "1");
-				return json({ ref, url: prUrl(ref), meta, files, comments: await listComments(ref) });
+				const { meta, files, cwd } = await loadPr(ref, url.searchParams.get("fresh") === "1");
+				return json({ ref, url: prUrl(ref), meta, files, cwd, comments: await listComments(ref) });
 			} catch (error) {
 				return json({ error: error instanceof Error ? error.message : String(error) }, 502);
 			}
