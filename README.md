@@ -48,8 +48,17 @@ store directly. `MARGIN_HOME` moves it; `MARGIN_PORT` moves the server
 
 ```sh
 bun install
-bun link        # puts `margin` on PATH
+bun link        # puts `margin` on PATH for profile-sourcing shells
 bun dev         # serves http://localhost:4519
+```
+
+Agents launched by Canary DE run without a shell profile, so they resolve
+`margin` through a shim in `~/.golemapp/bin` (the directory every DE
+terminal has on PATH):
+
+```sh
+printf '#!/bin/sh\nexec /opt/homebrew/bin/bun %s/src/cli.ts "$@"\n' "$PWD" > ~/.golemapp/bin/margin
+chmod +x ~/.golemapp/bin/margin
 ```
 
 Needs `gh` signed in for the repositories you review.
