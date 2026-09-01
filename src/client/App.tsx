@@ -1,11 +1,17 @@
 import {
+	Check,
+	CheckCheck,
 	ExternalLink,
+	GitCompareArrows,
+	GitMerge,
 	GitPullRequestArrow,
 	ListChecks,
+	LoaderCircle,
 	MessageSquare,
 	RefreshCw,
 	Rocket,
-	SquareCheckBig,
+	TriangleAlert,
+	X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { LiveBranchStatus } from "../core/livebranch";
@@ -13,7 +19,7 @@ import type { ConversationEntry } from "../core/pr";
 import { parsePrRef } from "../core/pr";
 import type { CheckRun, Comment } from "../core/types";
 import { api, timeAgo, useIdentity, useToasts, type PrPayload } from "./lib";
-import { ChecksSection } from "./components/ChecksSection";
+import { ChecksSection, checksSummary } from "./components/ChecksSection";
 import { ConversationTab } from "./components/ConversationTab";
 import { DiffFileCard, type DiffView } from "./components/DiffFileCard";
 import { FileTree } from "./components/FileTree";
@@ -196,40 +202,60 @@ function Review({ pr }: { pr: string }) {
 
 	const chip = stateChip(data.meta);
 	const open = comments.filter((c) => c.status === "open").length;
-	const fails = (checks ?? []).filter((c) => c.bucket === "fail" || c.bucket === "cancel").length;
-	const pending = (checks ?? []).filter((c) => c.bucket === "pending").length;
+	const ci = checksSummary(checks);
+	const conflicting = data.meta.mergeable === "CONFLICTING";
+	const convCount = (conversation?.entries.length ?? 0) + open;
 	const scrollTo = (path: string, commentId?: string) => {
 		const el = commentId ? document.getElementById(`thread-${commentId}`) : fileRefs.current.get(path);
 		el?.scrollIntoView({ behavior: "smooth", block: commentId ? "center" : "start" });
 	};
 
+	const ciIcon =
+		ci.fails > 0 ? (
+			<X size={14} className="ci-ico fail" />
+		) : ci.pending > 0 ? (
+			<LoaderCircle size={14} className="ci-ico pending spin-slow" />
+		) : ci.total > 0 ? (
+			<CheckCheck size={14} className="ci-ico pass" />
+		) : (
+			<CheckCheck size={14} />
+		);
+
 	const tabs: Array<{ id: TabId; word: string; icon: React.ReactNode; badge?: React.ReactNode }> = [
 		{
 			id: "changes",
 			word: "Changes",
-			icon: <GitPullRequestArrow size={13} />,
+			icon: <GitCompareArrows size={14} />,
 			badge: <span className="tab-badge">{data.files.length}</span>,
 		},
-		{ id: "review", word: "Review", icon: <SquareCheckBig size={13} /> },
+		{ id: "review", word: "Review", icon: <ListChecks size={14} /> },
 		{
 			id: "ci",
 			word: "CI",
-			icon: <ListChecks size={13} />,
+			icon: ciIcon,
 			badge:
-				fails > 0 ? (
-					<span className="tab-badge fail">{fails}</span>
-				) : pending > 0 ? (
-					<span className="tab-badge pending">{pending}</span>
+				ci.fails > 0 ? (
+					<span className="tab-badge fail">{ci.fails}</span>
+				) : ci.pending > 0 ? (
+					<span className="tab-badge pending">
+						{ci.passed}/{ci.total}
+					</span>
 				) : undefined,
 		},
 		{
 			id: "conversation",
 			word: "Conversation",
-			icon: <MessageSquare size={13} />,
-			badge: open > 0 ? <span className="tab-badge open">{open}</span> : undefined,
+			icon: <MessageSquare size={14} />,
+			badge: convCount > 0 ? <span className="tab-badge">{convCount}</span> : undefined,
 		},
 		...(liveBranch?.supported
-			? [{ id: "live" as TabId, word: "Live Branch", icon: <Rocket size={13} /> }]
+			? [
+					{
+						id: "live" as TabId,
+						word: "Live Branch",
+						icon: <Rocket size={14} className={liveBranch.pod?.state === "ready" ? "ci-ico pass" : ""} />,
+					},
+				]
 			: []),
 	];
 
@@ -241,9 +267,7 @@ function Review({ pr }: { pr: string }) {
 					margin
 				</a>
 				<span className="pr-name">
-					<span className="pr-repo">
-						{data.ref.owner}/{data.ref.repo}
-					</span>
+					<GitPullRequestArrow size={14} className={`pr-state-ico ${chip.cls}`} />
 					<b>#{data.ref.number}</b>
 					<span className="pr-title" title={data.meta.title}>
 						{data.meta.title}
@@ -254,9 +278,36 @@ function Review({ pr }: { pr: string }) {
 				<IdentityMenu />
 			</header>
 
+			{conflicting && (
+				<div className="conflict-banner">
+					<TriangleAlert size={14} />
+					This branch has conflicts with the base branch.
+					<span className="spacer" />
+					<a className="btn sm" href={`${data.url}/conflicts`} target="_blank" rel="noreferrer">
+						<GitMerge size={12} /> Fix conflicts
+					</a>
+				</div>
+			)}
+
 			<div className="prheader">
-				<HeaderActions pr={pr} isDraft={data.meta.isDraft} onDone={() => void load(true)} />
+				{data.meta.state.toLowerCase() === "open" && (
+					<HeaderActions
+						pr={pr}
+						isDraft={data.meta.isDraft}
+						conflicting={conflicting}
+						onDone={() => void load(true)}
+					/>
+				)}
 				<span className="spacer" />
+				{tab === "changes" && (
+					<div className="seg">
+						{(["unified", "split"] as DiffView[]).map((v) => (
+							<button key={v} type="button" className={view === v ? "on" : ""} onClick={() => pickView(v)}>
+								{v === "unified" ? "Unified" : "Split"}
+							</button>
+						))}
+					</div>
+				)}
 				<span className="pr-branches mono" title={`${data.meta.headRefName} into ${data.meta.baseRefName}`}>
 					{data.meta.headRefName} → {data.meta.baseRefName}
 				</span>
@@ -294,16 +345,6 @@ function Review({ pr }: { pr: string }) {
 						{t.badge}
 					</button>
 				))}
-				<span className="spacer" />
-				{tab === "changes" && (
-					<div className="seg">
-						{(["unified", "split"] as DiffView[]).map((v) => (
-							<button key={v} type="button" className={view === v ? "on" : ""} onClick={() => pickView(v)}>
-								{v === "unified" ? "Unified" : "Split"}
-							</button>
-						))}
-					</div>
-				)}
 			</div>
 
 			{tab === "changes" && (
@@ -336,11 +377,8 @@ function Review({ pr }: { pr: string }) {
 			{tab === "review" && <ReviewTab pr={pr} />}
 
 			{tab === "ci" && (
-				<div className="tabpage">
-					<div className="tabpage-card">
-						<ChecksSection checks={checks} />
-						{(checks ?? []).length === 0 && <p className="conv-empty">No checks reported.</p>}
-					</div>
+				<div className="tabfull">
+					<ChecksSection checks={checks} />
 				</div>
 			)}
 
@@ -361,10 +399,8 @@ function Review({ pr }: { pr: string }) {
 			)}
 
 			{tab === "live" && (
-				<div className="tabpage">
-					<div className="tabpage-card">
-						<LiveBranchSection pr={pr} status={liveBranch} onChanged={loadSide} />
-					</div>
+				<div className="tabfull">
+					<LiveBranchSection pr={pr} status={liveBranch} onChanged={loadSide} />
 				</div>
 			)}
 

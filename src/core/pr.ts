@@ -32,7 +32,7 @@ export async function fetchMeta(ref: PrRef): Promise<PrMeta> {
 		"view",
 		prUrl(ref),
 		"--json",
-		"title,state,isDraft,author,headRefName,baseRefName,additions,deletions,changedFiles",
+		"title,state,isDraft,author,headRefName,baseRefName,additions,deletions,changedFiles,mergeable",
 	]);
 	const d = JSON.parse(raw) as Omit<PrMeta, "author"> & { author: { login: string } };
 	return { ...d, author: d.author?.login ?? "" };
@@ -67,15 +67,67 @@ export async function fetchChecks(ref: PrRef): Promise<CheckRun[]> {
 	}
 }
 
-export type PrAction = "approve" | "merge" | "automerge" | "ready" | "update-branch";
+export type PrAction =
+	| "approve"
+	| "merge"
+	| "admin-merge"
+	| "automerge"
+	| "ready"
+	| "update-branch";
 
 export async function runPrAction(ref: PrRef, action: PrAction): Promise<void> {
 	const url = prUrl(ref);
 	if (action === "approve") await gh(["pr", "review", url, "--approve"]);
 	else if (action === "merge") await gh(["pr", "merge", url, "--squash"]);
+	// Bypasses branch protection; only an admin on the repository may do it.
+	else if (action === "admin-merge") await gh(["pr", "merge", url, "--squash", "--admin"]);
 	else if (action === "automerge") await gh(["pr", "merge", url, "--squash", "--auto"]);
 	else if (action === "ready") await gh(["pr", "ready", url]);
 	else await gh(["pr", "update-branch", url]);
+}
+
+/**
+ * Canary's deploy-on-merge switch is the `00_AUTO_DEPLOY` label. A repository
+ * without that label has no such workflow, and the merge menu leaves the item
+ * out.
+ */
+const AUTO_DEPLOY_LABEL = "00_AUTO_DEPLOY";
+
+export async function getAutoDeploy(
+	ref: PrRef,
+): Promise<{ available: boolean; enabled: boolean }> {
+	// `gh label list --search` matches substrings; the exact name is compared.
+	const [repoLabels, pr] = await Promise.all([
+		gh([
+			"label",
+			"list",
+			"-R",
+			`${ref.owner}/${ref.repo}`,
+			"--search",
+			AUTO_DEPLOY_LABEL,
+			"--limit",
+			"20",
+			"--json",
+			"name",
+		]).then((raw) => JSON.parse(raw) as Array<{ name: string }>),
+		gh(["pr", "view", prUrl(ref), "--json", "labels"]).then(
+			(raw) => JSON.parse(raw) as { labels: Array<{ name: string }> },
+		),
+	]);
+	return {
+		available: repoLabels.some((l) => l.name === AUTO_DEPLOY_LABEL),
+		enabled: pr.labels.some((l) => l.name === AUTO_DEPLOY_LABEL),
+	};
+}
+
+export async function setAutoDeploy(ref: PrRef, enabled: boolean): Promise<void> {
+	await gh([
+		"pr",
+		"edit",
+		prUrl(ref),
+		enabled ? "--add-label" : "--remove-label",
+		AUTO_DEPLOY_LABEL,
+	]);
 }
 
 export interface ConversationEntry {

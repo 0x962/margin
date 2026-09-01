@@ -50,6 +50,8 @@ export interface PrMeta {
 	additions: number;
 	deletions: number;
 	changedFiles: number;
+	/** MERGEABLE | CONFLICTING | UNKNOWN, GitHub's own words. */
+	mergeable: string;
 }
 
 export interface CheckRun {

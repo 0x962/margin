@@ -43,6 +43,10 @@ export const api = {
 		),
 	action: (pr: string, action: PrAction) =>
 		j<{ ok: boolean }>(`/api/pr/action?pr=${encodeURIComponent(pr)}`, post({ action })),
+	autoDeploy: (pr: string) =>
+		j<{ available: boolean; enabled: boolean }>(`/api/pr/autodeploy?pr=${encodeURIComponent(pr)}`),
+	setAutoDeploy: (pr: string, enabled: boolean) =>
+		j<{ ok: boolean }>(`/api/pr/autodeploy?pr=${encodeURIComponent(pr)}`, post({ enabled })),
 	liveBranch: (pr: string) => j<LiveBranchStatus>(`/api/pr/livebranch?pr=${encodeURIComponent(pr)}`),
 	liveBranchOp: (pr: string, op: "ensure" | "create" | "deploy" | "delete") =>
 		j<{ action?: string; posted?: boolean }>(`/api/pr/livebranch?pr=${encodeURIComponent(pr)}`, post({ op })),

@@ -5,8 +5,10 @@ import {
 	fetchConversation,
 	fetchDiff,
 	fetchMeta,
+	getAutoDeploy,
 	parsePrRef,
 	runPrAction,
+	setAutoDeploy,
 	type PrAction,
 } from "./core/pr";
 import {
@@ -97,6 +99,26 @@ const server = Bun.serve({
 				const b = await body<{ action: PrAction }>(req);
 				try {
 					await runPrAction(ref, b.action);
+					return json({ ok: true });
+				} catch (error) {
+					return json({ error: error instanceof Error ? error.message : String(error) }, 502);
+				}
+			},
+		},
+
+		"/api/pr/autodeploy": {
+			GET: async (req) => {
+				try {
+					return json(await getAutoDeploy(refFromQuery(new URL(req.url))));
+				} catch (error) {
+					return json({ error: error instanceof Error ? error.message : String(error) }, 502);
+				}
+			},
+			POST: async (req) => {
+				const ref = refFromQuery(new URL(req.url));
+				const b = await body<{ enabled: boolean }>(req);
+				try {
+					await setAutoDeploy(ref, b.enabled);
 					return json({ ok: true });
 				} catch (error) {
 					return json({ error: error instanceof Error ? error.message : String(error) }, 502);
