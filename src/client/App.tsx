@@ -132,6 +132,15 @@ function Review({ pr }: { pr: string }) {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [pr]);
 
+	// A host app embedding this page as a tab reads the document title;
+	// naming the tab after the PR is what makes those tabs manageable.
+	useEffect(() => {
+		if (data) document.title = `#${data.ref.number} ${data.meta.title}`;
+		return () => {
+			document.title = "margin — local review";
+		};
+	}, [data]);
+
 	const byFile = useMemo(() => {
 		const map = new Map<string, Comment[]>();
 		for (const c of comments) {
