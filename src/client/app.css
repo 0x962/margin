@@ -1414,3 +1414,97 @@ table.diff {
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
+
+/* ---------- aligned tree columns, no left accents ---------- */
+
+.tree-dir,
+.file-row {
+	height: 30px;
+	font-size: 13px;
+}
+.row-right {
+	margin-left: auto;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	flex: none;
+}
+.row-delta {
+	min-width: 72px;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	font-size: 12.5px;
+	display: inline-block;
+}
+.row-delta .plus {
+	color: var(--ok);
+	font-style: normal;
+}
+.row-delta .minus {
+	color: var(--danger);
+	font-style: normal;
+	margin-left: 6px;
+}
+.row-mark {
+	width: 16px;
+	display: inline-flex;
+	justify-content: center;
+	align-items: center;
+	font-weight: 700;
+	font-size: 12.5px;
+}
+.file-ico {
+	flex: none;
+}
+.file-row .file-delta {
+	display: none;
+}
+.tree-count {
+	display: none;
+}
+.tree-dir-name {
+	color: var(--text);
+}
+
+.thread {
+	border-left: 1px solid var(--border);
+}
+.thread.resolved {
+	border-left-color: var(--border);
+}
+.reply {
+	border-left: 0;
+	padding-left: 10px;
+}
+
+/* ---------- picker search + repo groups + fixed diff grid ---------- */
+
+.diff col.c-num {
+	width: 44px;
+}
+
+.pr-pick-search {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 10px;
+	border-bottom: 1px solid var(--border);
+	color: var(--text-faint);
+}
+.pr-pick-search input {
+	flex: 1;
+	background: none;
+	border: 0;
+	outline: none;
+	color: var(--text);
+	font-size: 12.5px;
+	font-family: inherit;
+}
+.pr-pick-repo {
+	padding: 8px 10px 3px;
+	font-size: 10.5px;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: var(--text-faint);
+}

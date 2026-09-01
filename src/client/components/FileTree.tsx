@@ -1,41 +1,47 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import type { Comment, DiffFile } from "../../core/types";
 import { buildTree, type TreeDir } from "../tree";
 
-/** Per-language tints for the extension badge, GitHub's language colors. */
-const LANG_COLOR: Record<string, string> = {
-	py: "#3572A5",
-	ts: "#3178c6",
-	tsx: "#3178c6",
-	js: "#f1e05a",
-	jsx: "#f1e05a",
-	rb: "#701516",
-	go: "#00ADD8",
-	rs: "#dea584",
-	java: "#b07219",
-	kt: "#A97BFF",
-	swift: "#F05138",
-	css: "#663399",
-	html: "#e34c26",
-	md: "#519aba",
-	json: "#a8b1c2",
-	yml: "#cb171e",
-	yaml: "#cb171e",
-	toml: "#9c4221",
-	sql: "#e38c00",
-	sh: "#89e051",
-	lock: "#6b7280",
-};
+interface IconManifest {
+	fileNames: Record<string, string>;
+	fileExtensions: Record<string, string>;
+	defaultIcon: string;
+}
 
-function ExtBadge({ path }: { path: string }) {
-	const ext = path.split(".").pop()?.toLowerCase() ?? "";
-	const color = LANG_COLOR[ext] ?? "#6b7280";
-	return (
-		<span className="ext-badge" style={{ color, borderColor: `${color}55` }}>
-			{ext.slice(0, 4)}
-		</span>
-	);
+let manifestCache: IconManifest | null = null;
+let manifestPromise: Promise<IconManifest> | null = null;
+
+function loadManifest(): Promise<IconManifest> {
+	manifestPromise ??= fetch("/api/file-icons/manifest")
+		.then((r) => r.json() as Promise<IconManifest>)
+		.then((m) => {
+			manifestCache = m;
+			return m;
+		});
+	return manifestPromise;
+}
+
+/** "a.test.py" tries "a.test.py", then "test.py", then "py". */
+function iconFor(m: IconManifest, base: string): string {
+	const lower = base.toLowerCase();
+	if (m.fileNames[lower]) return m.fileNames[lower];
+	const parts = lower.split(".");
+	for (let i = 1; i < parts.length; i++) {
+		const ext = parts.slice(i).join(".");
+		if (m.fileExtensions[ext]) return m.fileExtensions[ext];
+	}
+	return m.defaultIcon;
+}
+
+function FileIcon({ path }: { path: string }) {
+	const [manifest, setManifest] = useState(manifestCache);
+	useEffect(() => {
+		if (!manifest) void loadManifest().then(setManifest);
+	}, [manifest]);
+	const base = path.split("/").pop() ?? "";
+	const icon = manifest ? iconFor(manifest, base) : "file";
+	return <img className="file-ico" src={`/file-icons/${icon}.svg`} width={15} height={15} alt="" />;
 }
 
 const STATUS_LETTER: Record<DiffFile["status"], { letter: string; cls: string }> = {
@@ -49,11 +55,15 @@ function countFiles(dir: TreeDir): number {
 	return dir.files.length + dir.dirs.reduce((t, d) => t + countFiles(d), 0);
 }
 
+/** One indent step; a file row adds one more so its icon sits under its parent's text. */
+const STEP = 21;
+
 /**
  * The changed files as the app's pane drew them: directory rows with their
- * path segments separated by slashes and a per-directory count, file rows
- * with a language badge, the name tinted by its change status, the +/-
- * delta, and the status letter.
+ * path segments separated by slashes and a right-aligned count and change
+ * dot, file rows with the language's icon, the name tinted by its change
+ * status, and the delta and status letter in fixed end columns so every row
+ * lines up.
  */
 export function FileTree({
 	files,
@@ -93,16 +103,19 @@ export function FileTree({
 				<button
 					type="button"
 					className="tree-dir"
-					style={{ paddingLeft: 10 + depth * 12 }}
+					style={{ paddingLeft: 10 + depth * STEP }}
 					onClick={() => toggle(dir.path)}
 				>
-					{isClosed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+					{isClosed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
 					<span className="tree-dir-name" title={dir.path}>
 						{segments(dir.name)}
 					</span>
-					<span className="spacer" />
-					<span className="tree-count">{countFiles(dir)}</span>
-					<span className="tree-dot" />
+					<span className="row-right">
+						<span className="row-delta dim">{countFiles(dir)}</span>
+						<span className="row-mark">
+							<span className="tree-dot" />
+						</span>
+					</span>
 				</button>
 				{!isClosed && renderBody(dir, depth + 1)}
 			</div>
@@ -120,19 +133,20 @@ export function FileTree({
 						type="button"
 						key={f.path}
 						className="file-row"
-						style={{ paddingLeft: 10 + depth * 12 + 14 }}
+						style={{ paddingLeft: 10 + depth * STEP + STEP }}
 						title={f.path}
 						onClick={() => onPick(f.path)}
 					>
-						<ExtBadge path={f.path} />
+						<FileIcon path={f.path} />
 						<span className={`file-name st-${status.cls}`}>{f.path.split("/").pop()}</span>
 						{open > 0 && <span className="file-open">{open}</span>}
-						<span className="spacer" />
-						<span className="file-delta">
-							{f.additions > 0 && <em className="plus">+{f.additions}</em>}
-							{f.deletions > 0 && <em className="minus">−{f.deletions}</em>}
+						<span className="row-right">
+							<span className="row-delta">
+								{f.additions > 0 && <em className="plus">+{f.additions}</em>}
+								{f.deletions > 0 && <em className="minus">−{f.deletions}</em>}
+							</span>
+							<span className={`row-mark file-letter st-${status.cls}`}>{status.letter}</span>
 						</span>
-						<span className={`file-letter st-${status.cls}`}>{status.letter}</span>
 					</button>
 				);
 			})}
@@ -142,8 +156,8 @@ export function FileTree({
 	return (
 		<div className="file-list">
 			<button type="button" className="tree-section" onClick={() => setRootClosed(!rootClosed)}>
-				{rootClosed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
-				<b>Changed</b>
+				{rootClosed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
+				<b>Committed</b>
 				<span className="dim">{files.length}</span>
 			</button>
 			{!rootClosed && renderBody(tree, 0)}

@@ -1,18 +1,17 @@
 import {
-	Check,
 	CheckCheck,
-	ExternalLink,
+	CloudDownload,
 	GitCompareArrows,
 	GitMerge,
 	GitPullRequestArrow,
 	ListChecks,
 	LoaderCircle,
 	MessageSquare,
-	RefreshCw,
 	Rocket,
 	TriangleAlert,
 	X,
 } from "lucide-react";
+import { SiGithub } from "react-icons/si";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { LiveBranchStatus } from "../core/livebranch";
 import type { ConversationEntry } from "../core/pr";
@@ -267,7 +266,13 @@ function Review({ pr }: { pr: string }) {
 					<span className="mark" />
 					margin
 				</a>
-				<PrPicker number={data.ref.number} title={data.meta.title} stateCls={chip.cls} />
+				<span className="pr-name">
+					<GitPullRequestArrow size={14} className={`pr-state-ico ${chip.cls}`} />
+					<b>#{data.ref.number}</b>
+					<span className="pr-title" title={data.meta.title}>
+						{data.meta.title}
+					</span>
+				</span>
 				<span className={`state-chip ${chip.cls}`}>{chip.word}</span>
 				<span className="spacer" />
 				<IdentityMenu />
@@ -285,6 +290,7 @@ function Review({ pr }: { pr: string }) {
 			)}
 
 			<div className="prheader">
+				<PrPicker number={data.ref.number} />
 				{data.meta.state.toLowerCase() === "open" && (
 					<HeaderActions
 						pr={pr}
@@ -313,17 +319,17 @@ function Review({ pr }: { pr: string }) {
 				<button
 					type="button"
 					className="btn ghost icon"
-					title="Refetch from GitHub"
+					title="Pull the latest from GitHub"
 					onClick={() => {
 						setRefreshing(true);
 						loadSide();
 						void load(true).finally(() => setRefreshing(false));
 					}}
 				>
-					<RefreshCw size={13} className={refreshing ? "spin" : ""} />
+					{refreshing ? <LoaderCircle size={14} className="spin" /> : <CloudDownload size={14} />}
 				</button>
 				<a className="btn ghost icon" href={data.url} target="_blank" rel="noreferrer" title="Open on GitHub">
-					<ExternalLink size={13} />
+					<SiGithub size={13} />
 				</a>
 			</div>
 

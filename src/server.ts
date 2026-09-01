@@ -1,3 +1,4 @@
+import { generateManifest } from "material-icon-theme";
 import index from "./client/index.html";
 import { ensureLiveBranch, getLiveBranch, liveBranchCommand } from "./core/livebranch";
 import {
@@ -69,6 +70,26 @@ const server = Bun.serve({
 	development: { hmr: false },
 	routes: {
 		"/api/prs": async () => json(await listPrs()),
+
+		// The same file icons the Canary DE tree uses: material-icon-theme's
+		// manifest maps names and extensions to icon files, served from the
+		// package itself.
+		"/api/file-icons/manifest": () => {
+			const m = generateManifest();
+			return json({
+				fileNames: m.fileNames ?? {},
+				fileExtensions: m.fileExtensions ?? {},
+				defaultIcon: m.file ?? "file",
+			});
+		},
+		"/file-icons/:name": (req) => {
+			const name = req.params.name;
+			if (!/^[\w.-]+\.svg$/.test(name)) return new Response("bad name", { status: 400 });
+			const file = Bun.file(`${import.meta.dir}/../node_modules/material-icon-theme/icons/${name}`);
+			return new Response(file, {
+				headers: { "content-type": "image/svg+xml", "cache-control": "max-age=3600" },
+			});
+		},
 		"/api/my-prs": async () => {
 			try {
 				return json(await fetchMyOpenPrs());

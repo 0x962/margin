@@ -207,6 +207,22 @@ export function DiffFileCard({
 
 			{!collapsed && !file.binary && (
 				<table className={`diff ${view}`}>
+					{/* table-layout is fixed, and the first body row spans columns;
+					    the colgroup is what actually defines the grid. */}
+					{view === "split" ? (
+						<colgroup>
+							<col className="c-num" />
+							<col />
+							<col className="c-num" />
+							<col />
+						</colgroup>
+					) : (
+						<colgroup>
+							<col className="c-num" />
+							<col className="c-num" />
+							<col />
+						</colgroup>
+					)}
 					<tbody>
 						{file.hunks.map((hunk, hi) => (
 							<Fragment key={hi}>
