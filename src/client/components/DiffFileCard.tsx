@@ -53,7 +53,7 @@ export function DiffFileCard({
 	const [composerAt, setComposerAt] = useState<Anchor | null>(null);
 	const setAuthor = useIdentity((s) => s.set);
 	const language = useMemo(() => languageOf(file.path), [file.path]);
-	const cols = view === "split" ? 4 : 3;
+	const cols = view === "split" ? 4 : 2;
 
 	const byAnchor = useMemo(() => {
 		const map = new Map<string, Comment[]>();
@@ -150,8 +150,7 @@ export function DiffFileCard({
 			return (
 				<Fragment key={li}>
 					<tr className={`line ${l.type}`}>
-						<td className="num old">{l.old ?? ""}</td>
-						<td className="num new">{l.new ?? ""}</td>
+						<td className={`num ${l.type === "del" ? "old" : "new"}`}>{l.new ?? l.old ?? ""}</td>
 						<td className="code">
 							{addBtn(at)}
 							{code(l)}
@@ -218,7 +217,6 @@ export function DiffFileCard({
 						</colgroup>
 					) : (
 						<colgroup>
-							<col className="c-num" />
 							<col className="c-num" />
 							<col />
 						</colgroup>

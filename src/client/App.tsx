@@ -165,6 +165,14 @@ function Review({ pr }: { pr: string }) {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [pr]);
 
+	// The pod claim finishes within a minute, so the wait state polls fast.
+	useEffect(() => {
+		if (!liveBranch?.supported || !liveBranch.enabled || liveBranch.pod) return;
+		const fast = setInterval(() => void api.liveBranch(pr).then(setLiveBranch, () => {}), 10_000);
+		return () => clearInterval(fast);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [pr, liveBranch?.supported, liveBranch?.enabled, liveBranch?.pod]);
+
 	// A host app embedding this page as a tab reads the document title;
 	// naming the tab after the PR is what makes those tabs manageable.
 	useEffect(() => {
