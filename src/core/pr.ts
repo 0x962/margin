@@ -2,12 +2,14 @@ import type { DiffFile, DiffHunk, DiffLine, PrMeta, PrRef } from "./types";
 import { prUrl } from "./store";
 
 /**
- * A PR can be named by its full GitHub URL, with or without the scheme, or
- * by the short forms owner/repo#123 and owner/repo/123.
+ * A PR can be named by its full GitHub URL, with or without the scheme, by
+ * the short forms owner/repo#123 and owner/repo/123, or by any URL that
+ * carries the GitHub URL inside it — a margin review link
+ * (http://margin.localhost/https://github.com/...) names the same PR.
  */
 export function parsePrRef(input: string): PrRef | null {
 	const s = decodeURIComponent(input.trim()).replace(/^\/+/, "").replace(/\/+$/, "");
-	let m = /^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/.exec(s);
+	let m = /(?:^|\/)github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/.exec(s);
 	if (m) return { owner: m[1], repo: m[2], number: Number(m[3]) };
 	m = /^([\w.-]+)\/([\w.-]+)[#/](\d+)$/.exec(s);
 	if (m) return { owner: m[1], repo: m[2], number: Number(m[3]) };

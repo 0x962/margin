@@ -11,6 +11,14 @@ describe("parsePrRef", () => {
 		expect(parsePrRef("o/r#7")).toEqual({ owner: "o", repo: "r", number: 7 });
 		expect(parsePrRef("o/r/7")).toEqual({ owner: "o", repo: "r", number: 7 });
 	});
+	test("a margin review link names the PR inside it", () => {
+		expect(parsePrRef("http://margin.localhost/https://github.com/o/r/pull/12")).toEqual({
+			owner: "o",
+			repo: "r",
+			number: 12,
+		});
+		expect(parsePrRef("http://margin/https://github.com/o/r/pull/12")?.number).toBe(12);
+	});
 	test("garbage is null", () => {
 		expect(parsePrRef("not a pr")).toBeNull();
 		expect(parsePrRef("https://github.com/o/r/issues/5")).toBeNull();
