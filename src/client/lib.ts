@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { LiveBranchStatus } from "../core/livebranch";
-import type { PrAction } from "../core/pr";
+import type { ConversationEntry, PrAction } from "../core/pr";
 import type { CheckRun, Comment, DiffFile, PrMeta, PrRef } from "../core/types";
 
 export interface PrPayload {
@@ -37,6 +37,10 @@ export const api = {
 	reply: (pr: string, id: string, input: object) =>
 		j<Comment>(`/api/comments/${id}/replies?pr=${encodeURIComponent(pr)}`, post(input)),
 	checks: (pr: string) => j<CheckRun[]>(`/api/pr/checks?pr=${encodeURIComponent(pr)}`),
+	conversation: (pr: string) =>
+		j<{ body: string; entries: ConversationEntry[] }>(
+			`/api/pr/conversation?pr=${encodeURIComponent(pr)}`,
+		),
 	action: (pr: string, action: PrAction) =>
 		j<{ ok: boolean }>(`/api/pr/action?pr=${encodeURIComponent(pr)}`, post({ action })),
 	liveBranch: (pr: string) => j<LiveBranchStatus>(`/api/pr/livebranch?pr=${encodeURIComponent(pr)}`),

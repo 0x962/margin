@@ -67,13 +67,51 @@ export async function fetchChecks(ref: PrRef): Promise<CheckRun[]> {
 	}
 }
 
-export type PrAction = "approve" | "merge" | "automerge";
+export type PrAction = "approve" | "merge" | "automerge" | "ready" | "update-branch";
 
 export async function runPrAction(ref: PrRef, action: PrAction): Promise<void> {
 	const url = prUrl(ref);
 	if (action === "approve") await gh(["pr", "review", url, "--approve"]);
 	else if (action === "merge") await gh(["pr", "merge", url, "--squash"]);
-	else await gh(["pr", "merge", url, "--squash", "--auto"]);
+	else if (action === "automerge") await gh(["pr", "merge", url, "--squash", "--auto"]);
+	else if (action === "ready") await gh(["pr", "ready", url]);
+	else await gh(["pr", "update-branch", url]);
+}
+
+export interface ConversationEntry {
+	author: string;
+	createdAt: string;
+	body: string;
+	/** A review verdict (APPROVED, CHANGES_REQUESTED, COMMENTED); empty for a plain comment. */
+	verdict?: string;
+}
+
+/** The PR's description and its GitHub conversation, oldest first. */
+export async function fetchConversation(
+	ref: PrRef,
+): Promise<{ body: string; entries: ConversationEntry[] }> {
+	const raw = await gh(["pr", "view", prUrl(ref), "--json", "body,comments,reviews"]);
+	const d = JSON.parse(raw) as {
+		body: string;
+		comments: Array<{ author: { login: string }; createdAt: string; body: string }>;
+		reviews: Array<{ author: { login: string }; submittedAt: string; body: string; state: string }>;
+	};
+	const entries: ConversationEntry[] = [
+		...d.comments.map((c) => ({
+			author: c.author?.login ?? "",
+			createdAt: c.createdAt,
+			body: c.body,
+		})),
+		...d.reviews
+			.filter((r) => r.body?.trim() || r.state !== "COMMENTED")
+			.map((r) => ({
+				author: r.author?.login ?? "",
+				createdAt: r.submittedAt,
+				body: r.body ?? "",
+				verdict: r.state,
+			})),
+	].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+	return { body: d.body, entries };
 }
 
 /** `git diff` quotes a path with special characters; strip the a/ or b/ prefix either way. */

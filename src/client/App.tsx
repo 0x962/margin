@@ -1,15 +1,26 @@
-import { ExternalLink, RefreshCw } from "lucide-react";
+import {
+	ExternalLink,
+	GitPullRequestArrow,
+	ListChecks,
+	MessageSquare,
+	RefreshCw,
+	Rocket,
+	SquareCheckBig,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { LiveBranchStatus } from "../core/livebranch";
+import type { ConversationEntry } from "../core/pr";
 import { parsePrRef } from "../core/pr";
 import type { CheckRun, Comment } from "../core/types";
 import { api, timeAgo, useIdentity, useToasts, type PrPayload } from "./lib";
-import { ActionsMenu } from "./components/ActionsMenu";
 import { ChecksSection } from "./components/ChecksSection";
+import { ConversationTab } from "./components/ConversationTab";
 import { DiffFileCard, type DiffView } from "./components/DiffFileCard";
 import { FileTree } from "./components/FileTree";
+import { HeaderActions } from "./components/HeaderActions";
 import { IdentityMenu } from "./components/IdentityMenu";
 import { LiveBranchSection } from "./components/LiveBranchSection";
+import { ReviewTab } from "./components/ReviewTab";
 
 function Toasts() {
 	const toasts = useToasts((s) => s.toasts);
@@ -84,11 +95,21 @@ function stateChip(meta: PrPayload["meta"]): { word: string; cls: string } {
 	return { word: "Closed", cls: "closed" };
 }
 
+type TabId = "changes" | "review" | "ci" | "conversation" | "live";
+
+const TAB_IDS: TabId[] = ["changes", "review", "ci", "conversation", "live"];
+
+function initialTab(): TabId {
+	const fromHash = location.hash.slice(1) as TabId;
+	return TAB_IDS.includes(fromHash) ? fromHash : "changes";
+}
+
 function Review({ pr }: { pr: string }) {
 	const [data, setData] = useState<PrPayload | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [comments, setComments] = useState<Comment[]>([]);
 	const [refreshing, setRefreshing] = useState(false);
+	const [tab, setTab] = useState<TabId>(initialTab);
 	const [view, setView] = useState<DiffView>(
 		(localStorage.getItem("margin:view") as DiffView) === "split" ? "split" : "unified",
 	);
@@ -97,6 +118,10 @@ function Review({ pr }: { pr: string }) {
 	const pickView = (v: DiffView) => {
 		localStorage.setItem("margin:view", v);
 		setView(v);
+	};
+	const pickTab = (t: TabId) => {
+		setTab(t);
+		history.replaceState(null, "", `#${t}`);
 	};
 
 	const load = async (fresh = false) => {
@@ -112,9 +137,11 @@ function Review({ pr }: { pr: string }) {
 
 	const [checks, setChecks] = useState<CheckRun[] | null>(null);
 	const [liveBranch, setLiveBranch] = useState<LiveBranchStatus | null>(null);
+	const [conversation, setConversation] = useState<{ body: string; entries: ConversationEntry[] } | null>(null);
 	const loadSide = () => {
 		void api.checks(pr).then(setChecks, () => {});
 		void api.liveBranch(pr).then(setLiveBranch, () => {});
+		void api.conversation(pr).then(setConversation, () => {});
 	};
 
 	useEffect(() => {
@@ -122,7 +149,7 @@ function Review({ pr }: { pr: string }) {
 		loadSide();
 		// Agents comment through the CLI while this page is open; poll the
 		// comment file so their findings appear without a reload. Checks and
-		// the live branch change on GitHub's clock, so they poll slowly.
+		// the conversation change on GitHub's clock, so they poll slowly.
 		const iv = setInterval(() => void api.comments(pr).then(setComments, () => {}), 2500);
 		const slow = setInterval(loadSide, 45_000);
 		return () => {
@@ -169,11 +196,42 @@ function Review({ pr }: { pr: string }) {
 
 	const chip = stateChip(data.meta);
 	const open = comments.filter((c) => c.status === "open").length;
-	const resolved = comments.length - open;
+	const fails = (checks ?? []).filter((c) => c.bucket === "fail" || c.bucket === "cancel").length;
+	const pending = (checks ?? []).filter((c) => c.bucket === "pending").length;
 	const scrollTo = (path: string, commentId?: string) => {
 		const el = commentId ? document.getElementById(`thread-${commentId}`) : fileRefs.current.get(path);
 		el?.scrollIntoView({ behavior: "smooth", block: commentId ? "center" : "start" });
 	};
+
+	const tabs: Array<{ id: TabId; word: string; icon: React.ReactNode; badge?: React.ReactNode }> = [
+		{
+			id: "changes",
+			word: "Changes",
+			icon: <GitPullRequestArrow size={13} />,
+			badge: <span className="tab-badge">{data.files.length}</span>,
+		},
+		{ id: "review", word: "Review", icon: <SquareCheckBig size={13} /> },
+		{
+			id: "ci",
+			word: "CI",
+			icon: <ListChecks size={13} />,
+			badge:
+				fails > 0 ? (
+					<span className="tab-badge fail">{fails}</span>
+				) : pending > 0 ? (
+					<span className="tab-badge pending">{pending}</span>
+				) : undefined,
+		},
+		{
+			id: "conversation",
+			word: "Conversation",
+			icon: <MessageSquare size={13} />,
+			badge: open > 0 ? <span className="tab-badge open">{open}</span> : undefined,
+		},
+		...(liveBranch?.supported
+			? [{ id: "live" as TabId, word: "Live Branch", icon: <Rocket size={13} /> }]
+			: []),
+	];
 
 	return (
 		<div className="app">
@@ -192,33 +250,27 @@ function Review({ pr }: { pr: string }) {
 					</span>
 				</span>
 				<span className={`state-chip ${chip.cls}`}>{chip.word}</span>
+				<span className="spacer" />
+				<IdentityMenu />
+			</header>
+
+			<div className="prheader">
+				<HeaderActions pr={pr} isDraft={data.meta.isDraft} onDone={() => void load(true)} />
+				<span className="spacer" />
 				<span className="pr-branches mono" title={`${data.meta.headRefName} into ${data.meta.baseRefName}`}>
 					{data.meta.headRefName} → {data.meta.baseRefName}
 				</span>
-				<span className="spacer" />
-				<ActionsMenu pr={pr} onDone={() => void load(true)} />
-				<div className="seg">
-					{(["unified", "split"] as DiffView[]).map((v) => (
-						<button key={v} type="button" className={view === v ? "on" : ""} onClick={() => pickView(v)}>
-							{v === "unified" ? "Unified" : "Split"}
-						</button>
-					))}
-				</div>
-				<span className="head-stat">
-					<b>{open}</b> open
-					{resolved > 0 && (
-						<span className="dim">
-							{" "}
-							· {resolved} resolved
-						</span>
-					)}
+				<span className="file-delta">
+					<em className="plus">+{data.meta.additions}</em>
+					<em className="minus">−{data.meta.deletions}</em>
 				</span>
 				<button
 					type="button"
 					className="btn ghost icon"
-					title="Refetch the diff from GitHub"
+					title="Refetch from GitHub"
 					onClick={() => {
 						setRefreshing(true);
+						loadSide();
 						void load(true).finally(() => setRefreshing(false));
 					}}
 				>
@@ -227,57 +279,95 @@ function Review({ pr }: { pr: string }) {
 				<a className="btn ghost icon" href={data.url} target="_blank" rel="noreferrer" title="Open on GitHub">
 					<ExternalLink size={13} />
 				</a>
-				<IdentityMenu />
-			</header>
-
-			<div className="main">
-				<aside className="side">
-					<ChecksSection checks={checks} />
-					<LiveBranchSection pr={pr} status={liveBranch} onChanged={loadSide} />
-					<div className="panel-label">
-						Files <span className="dim">{data.files.length}</span>
-					</div>
-					<FileTree files={data.files} byFile={byFile} onPick={(path) => scrollTo(path)} />
-					{comments.length > 0 && (
-						<>
-							<div className="panel-label">Comments</div>
-							<div className="thread-list">
-								{[...comments]
-									.sort((a, b) => (a.status === b.status ? a.createdAt.localeCompare(b.createdAt) : a.status === "open" ? -1 : 1))
-									.map((c) => (
-										<button
-											type="button"
-											key={c.id}
-											className={`thread-row ${c.status}`}
-											onClick={() => scrollTo(c.path, c.id)}
-										>
-											<span className={`t-dot ${c.status}`} />
-											<span className="t-body">{c.body.split("\n")[0]}</span>
-											<span className="t-meta">{c.author}</span>
-										</button>
-									))}
-							</div>
-						</>
-					)}
-				</aside>
-
-				<div className="diff-col">
-					{data.files.map((f) => (
-						<DiffFileCard
-							key={f.path}
-							file={f}
-							pr={pr}
-							view={view}
-							comments={byFile.get(f.path) ?? []}
-							author={author}
-							onChanged={setComments}
-							refCb={(el) => {
-								if (el) fileRefs.current.set(f.path, el);
-							}}
-						/>
-					))}
-				</div>
 			</div>
+
+			<div className="tabstrip">
+				{tabs.map((t) => (
+					<button
+						key={t.id}
+						type="button"
+						className={`tab ${tab === t.id ? "on" : ""}`}
+						onClick={() => pickTab(t.id)}
+					>
+						{t.icon}
+						{t.word}
+						{t.badge}
+					</button>
+				))}
+				<span className="spacer" />
+				{tab === "changes" && (
+					<div className="seg">
+						{(["unified", "split"] as DiffView[]).map((v) => (
+							<button key={v} type="button" className={view === v ? "on" : ""} onClick={() => pickView(v)}>
+								{v === "unified" ? "Unified" : "Split"}
+							</button>
+						))}
+					</div>
+				)}
+			</div>
+
+			{tab === "changes" && (
+				<div className="main">
+					<aside className="side">
+						<div className="panel-label">
+							Files <span className="dim">{data.files.length}</span>
+						</div>
+						<FileTree files={data.files} byFile={byFile} onPick={(path) => scrollTo(path)} />
+					</aside>
+					<div className="diff-col">
+						{data.files.map((f) => (
+							<DiffFileCard
+								key={f.path}
+								file={f}
+								pr={pr}
+								view={view}
+								comments={byFile.get(f.path) ?? []}
+								author={author}
+								onChanged={setComments}
+								refCb={(el) => {
+									if (el) fileRefs.current.set(f.path, el);
+								}}
+							/>
+						))}
+					</div>
+				</div>
+			)}
+
+			{tab === "review" && <ReviewTab pr={pr} />}
+
+			{tab === "ci" && (
+				<div className="tabpage">
+					<div className="tabpage-card">
+						<ChecksSection checks={checks} />
+						{(checks ?? []).length === 0 && <p className="conv-empty">No checks reported.</p>}
+					</div>
+				</div>
+			)}
+
+			{tab === "conversation" && (
+				<div className="tabpage wide">
+					<ConversationTab
+						pr={pr}
+						description={conversation?.body ?? null}
+						entries={conversation?.entries ?? null}
+						comments={comments}
+						onChanged={setComments}
+						onJump={(c) => {
+							pickTab("changes");
+							setTimeout(() => scrollTo(c.path, c.id), 60);
+						}}
+					/>
+				</div>
+			)}
+
+			{tab === "live" && (
+				<div className="tabpage">
+					<div className="tabpage-card">
+						<LiveBranchSection pr={pr} status={liveBranch} onChanged={loadSide} />
+					</div>
+				</div>
+			)}
+
 			<Toasts />
 		</div>
 	);
@@ -286,11 +376,12 @@ function Review({ pr }: { pr: string }) {
 export function App() {
 	const path = location.pathname.slice(1);
 	const ref = path ? parsePrRef(path) : null;
-	if (!ref) return (
-		<>
-			<Landing />
-			<Toasts />
-		</>
-	);
+	if (!ref)
+		return (
+			<>
+				<Landing />
+				<Toasts />
+			</>
+		);
 	return <Review pr={`https://github.com/${ref.owner}/${ref.repo}/pull/${ref.number}`} />;
 }

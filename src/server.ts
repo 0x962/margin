@@ -1,6 +1,14 @@
 import index from "./client/index.html";
 import { ensureLiveBranch, getLiveBranch, liveBranchCommand } from "./core/livebranch";
-import { fetchChecks, fetchDiff, fetchMeta, parsePrRef, runPrAction, type PrAction } from "./core/pr";
+import {
+	fetchChecks,
+	fetchConversation,
+	fetchDiff,
+	fetchMeta,
+	parsePrRef,
+	runPrAction,
+	type PrAction,
+} from "./core/pr";
 import {
 	addComment,
 	editComment,
@@ -62,6 +70,14 @@ const server = Bun.serve({
 			try {
 				const { meta, files } = await loadPr(ref, url.searchParams.get("fresh") === "1");
 				return json({ ref, url: prUrl(ref), meta, files, comments: await listComments(ref) });
+			} catch (error) {
+				return json({ error: error instanceof Error ? error.message : String(error) }, 502);
+			}
+		},
+
+		"/api/pr/conversation": async (req) => {
+			try {
+				return json(await fetchConversation(refFromQuery(new URL(req.url))));
 			} catch (error) {
 				return json({ error: error instanceof Error ? error.message : String(error) }, 502);
 			}
