@@ -1,0 +1,7 @@
+import "@fontsource-variable/inter";
+import { createRoot } from "react-dom/client";
+import { App } from "./App";
+import "./theme.css";
+import "./app.css";
+
+createRoot(document.getElementById("root")!).render(<App />);

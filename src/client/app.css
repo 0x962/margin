@@ -1,0 +1,573 @@
+/* ---------- shell ---------- */
+
+.app {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	overflow: hidden;
+}
+.topbar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	height: 44px;
+	padding: 0 12px;
+	background: var(--panel);
+	border-bottom: 1px solid var(--border);
+	flex: none;
+}
+.main {
+	display: flex;
+	flex: 1;
+	min-height: 0;
+}
+.page-loading {
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-faint);
+}
+
+.pr-name {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 7px;
+	min-width: 0;
+	font-size: 12.5px;
+}
+.pr-repo {
+	color: var(--text-dim);
+}
+.pr-title {
+	font-weight: 550;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 44vw;
+}
+.state-chip {
+	flex: none;
+	height: 18px;
+	display: inline-flex;
+	align-items: center;
+	padding: 0 8px;
+	border-radius: 999px;
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.03em;
+}
+.state-chip.open {
+	color: var(--ok);
+	background: color-mix(in srgb, var(--ok) 12%, transparent);
+}
+.state-chip.draft {
+	color: var(--text-dim);
+	background: var(--panel-2);
+}
+.state-chip.merged {
+	color: #a48ff0;
+	background: rgba(164, 143, 240, 0.14);
+}
+.state-chip.closed {
+	color: var(--danger);
+	background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+.head-stat {
+	font-size: 12px;
+	color: var(--text-dim);
+}
+.head-stat b {
+	color: var(--text);
+}
+.identity {
+	font-size: 12px;
+}
+.identity-input {
+	width: 160px;
+}
+
+/* ---------- landing ---------- */
+
+.landing {
+	height: 100%;
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	padding-top: 18vh;
+}
+.landing-card {
+	width: 480px;
+	max-width: calc(100vw - 48px);
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+.landing-lede {
+	margin: 0;
+	color: var(--text-dim);
+	font-size: 13px;
+}
+.landing-recent {
+	background: var(--panel);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	padding-bottom: 6px;
+	box-shadow: var(--shadow-sm);
+}
+.recent-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 7px 14px;
+	color: var(--text);
+	text-decoration: none;
+	font-size: 12.5px;
+}
+.recent-row:hover {
+	background: var(--panel-2);
+}
+.recent-name b {
+	margin-left: 3px;
+}
+.recent-counts {
+	display: inline-flex;
+	gap: 8px;
+	flex: 1;
+}
+.count {
+	font-size: 11px;
+	color: var(--text-faint);
+}
+.count.open {
+	color: var(--ok);
+	font-weight: 600;
+}
+.recent-when {
+	font-size: 11px;
+	color: var(--text-faint);
+	font-variant-numeric: tabular-nums;
+}
+
+/* ---------- sidebar ---------- */
+
+.side {
+	width: 260px;
+	flex: none;
+	background: var(--panel);
+	border-right: 1px solid var(--border);
+	display: flex;
+	flex-direction: column;
+	overflow-y: auto;
+}
+.file-list {
+	display: flex;
+	flex-direction: column;
+	padding: 0 6px;
+}
+.file-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	border: 0;
+	background: none;
+	padding: 4px 8px;
+	border-radius: 5px;
+	cursor: pointer;
+	text-align: left;
+	min-width: 0;
+	color: var(--text);
+	font-size: 12.5px;
+}
+.file-row:hover {
+	background: var(--panel-2);
+}
+.file-name {
+	flex: 1;
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.file-open {
+	flex: none;
+	min-width: 16px;
+	height: 16px;
+	padding: 0 4px;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--mark) 18%, transparent);
+	color: var(--mark);
+	font-size: 10px;
+	font-weight: 700;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+.file-delta {
+	flex: none;
+	display: inline-flex;
+	gap: 5px;
+	font-size: 11px;
+	font-variant-numeric: tabular-nums;
+}
+.file-delta em {
+	font-style: normal;
+}
+.file-delta .plus {
+	color: var(--ok);
+}
+.file-delta .minus {
+	color: var(--danger);
+}
+
+.thread-list {
+	display: flex;
+	flex-direction: column;
+	padding: 0 6px 10px;
+}
+.thread-row {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	border: 0;
+	background: none;
+	padding: 4px 8px;
+	border-radius: 5px;
+	cursor: pointer;
+	text-align: left;
+	min-width: 0;
+	font-size: 12px;
+	color: var(--text);
+}
+.thread-row:hover {
+	background: var(--panel-2);
+}
+.thread-row.resolved {
+	color: var(--text-faint);
+}
+.t-dot {
+	flex: none;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--mark);
+}
+.t-dot.resolved {
+	background: var(--border-strong);
+}
+.t-body {
+	flex: 1;
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.t-meta {
+	flex: none;
+	font-size: 10.5px;
+	color: var(--text-faint);
+}
+
+/* ---------- diff ---------- */
+
+.diff-col {
+	flex: 1;
+	min-width: 0;
+	overflow-y: auto;
+	padding: 16px 18px 40vh;
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+.dfile {
+	flex: none;
+	background: var(--panel);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-sm);
+	overflow: hidden;
+}
+.dfile-head {
+	position: sticky;
+	top: 0;
+	z-index: 5;
+	width: 100%;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	border: 0;
+	border-bottom: 1px solid var(--border);
+	background: var(--panel);
+	padding: 9px 12px;
+	cursor: pointer;
+	text-align: left;
+	color: var(--text-dim);
+}
+.dfile-path {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	font-weight: 550;
+	color: var(--text);
+}
+.dfile-old {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--text-faint);
+}
+.fstate {
+	height: 16px;
+	display: inline-flex;
+	align-items: center;
+	padding: 0 6px;
+	border-radius: 4px;
+	font-size: 10px;
+	font-weight: 600;
+}
+.fstate.added {
+	color: var(--ok);
+	background: color-mix(in srgb, var(--ok) 12%, transparent);
+}
+.fstate.deleted {
+	color: var(--danger);
+	background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+.fstate.renamed {
+	color: var(--text-dim);
+	background: var(--panel-2);
+}
+.dfile-empty {
+	padding: 14px;
+	color: var(--text-faint);
+	font-size: 12px;
+}
+
+table.diff {
+	width: 100%;
+	border-collapse: collapse;
+	font-family: var(--font-mono);
+	font-size: 11.5px;
+	line-height: 1.55;
+}
+.diff .num {
+	width: 1%;
+	min-width: 42px;
+	padding: 0 8px;
+	text-align: right;
+	color: var(--text-faint);
+	user-select: none;
+	vertical-align: top;
+	font-size: 10.5px;
+	white-space: nowrap;
+}
+.diff .code {
+	position: relative;
+	padding: 0 10px 0 26px;
+	white-space: pre-wrap;
+	word-break: break-word;
+	vertical-align: top;
+}
+.diff .hunk {
+	color: var(--text-faint);
+	background: var(--panel-2);
+	padding-top: 3px;
+	padding-bottom: 3px;
+	font-size: 10.5px;
+}
+.hunk-row .num {
+	background: var(--panel-2);
+}
+.line.add .code {
+	background: var(--add-bg);
+}
+.line.add .num.new {
+	background: var(--add-num);
+}
+.line.del .code {
+	background: var(--del-bg);
+}
+.line.del .num.old {
+	background: var(--del-num);
+}
+
+.add-comment {
+	position: absolute;
+	left: 3px;
+	top: 1px;
+	width: 18px;
+	height: 16px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: 0;
+	border-radius: 4px;
+	background: transparent;
+	color: var(--text-faint);
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 0.1s;
+}
+.line:hover .add-comment {
+	opacity: 1;
+}
+.add-comment:hover {
+	color: var(--accent);
+	background: var(--accent-soft);
+}
+
+/* ---------- threads on the diff ---------- */
+
+.anchor-cell {
+	padding: 6px 12px 8px 26px;
+	background: var(--bg);
+	border-top: 1px solid var(--border);
+	border-bottom: 1px solid var(--border);
+}
+.thread {
+	font-family: var(--font-ui);
+	background: var(--panel);
+	border: 1px solid var(--border);
+	border-left: 2.5px solid var(--mark);
+	border-radius: var(--radius);
+	padding: 8px 11px;
+	margin: 5px 0;
+	max-width: 760px;
+	box-shadow: var(--shadow-sm);
+}
+.thread.resolved {
+	border-left-color: var(--border-strong);
+}
+.thread.collapsed {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+	color: var(--text-faint);
+	font-size: 12px;
+	padding: 5px 11px;
+}
+.thread.collapsed .ok {
+	color: var(--ok);
+	flex: none;
+}
+.collapsed-body {
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	color: var(--text-dim);
+}
+.collapsed-meta {
+	flex: none;
+	font-size: 11px;
+}
+.thread-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 4px;
+}
+.thread-body {
+	margin: 2px 0 4px;
+}
+.thread-foot {
+	display: flex;
+	gap: 6px;
+	margin-top: 2px;
+}
+.btn.resolve:hover {
+	color: var(--ok);
+}
+
+.who {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	min-width: 0;
+}
+.who-ico {
+	display: inline-flex;
+	color: var(--text-faint);
+}
+.who b {
+	font-weight: 600;
+}
+.who-session {
+	border: 0;
+	background: var(--panel-2);
+	color: var(--text-faint);
+	font-family: var(--font-mono);
+	font-size: 10px;
+	padding: 1px 5px;
+	border-radius: 4px;
+	cursor: pointer;
+}
+.who-session:hover {
+	color: var(--accent);
+}
+.who-when {
+	color: var(--text-faint);
+	font-size: 11px;
+}
+
+.reply {
+	margin: 6px 0 0 10px;
+	padding: 6px 0 0 10px;
+	border-left: 2px solid var(--border);
+}
+.reply-body {
+	margin-top: 2px;
+	color: var(--text);
+}
+
+.composer {
+	margin-top: 6px;
+	font-family: var(--font-ui);
+	max-width: 760px;
+}
+.composer-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 6px;
+}
+
+.orphans {
+	padding: 4px 12px 12px;
+	border-top: 1px solid var(--border);
+}
+.orphans .panel-label {
+	padding-left: 0;
+}
+
+/* ---------- syntax tokens ---------- */
+
+.code-text .hljs-keyword,
+.code-text .hljs-literal,
+.code-text .hljs-selector-tag {
+	color: var(--hl-keyword);
+}
+.code-text .hljs-string,
+.code-text .hljs-regexp {
+	color: var(--hl-string);
+}
+.code-text .hljs-comment,
+.code-text .hljs-quote {
+	color: var(--hl-comment);
+	font-style: italic;
+}
+.code-text .hljs-number,
+.code-text .hljs-built_in {
+	color: var(--hl-number);
+}
+.code-text .hljs-title,
+.code-text .hljs-function,
+.code-text .hljs-selector-class {
+	color: var(--hl-title);
+}
+.code-text .hljs-attr,
+.code-text .hljs-attribute,
+.code-text .hljs-variable,
+.code-text .hljs-params {
+	color: var(--hl-attr);
+}
