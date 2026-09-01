@@ -1,11 +1,15 @@
 import { ExternalLink, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { LiveBranchStatus } from "../core/livebranch";
 import { parsePrRef } from "../core/pr";
-import type { Comment } from "../core/types";
+import type { CheckRun, Comment } from "../core/types";
 import { api, timeAgo, useIdentity, useToasts, type PrPayload } from "./lib";
+import { ActionsMenu } from "./components/ActionsMenu";
+import { ChecksSection } from "./components/ChecksSection";
 import { DiffFileCard, type DiffView } from "./components/DiffFileCard";
 import { FileTree } from "./components/FileTree";
 import { IdentityMenu } from "./components/IdentityMenu";
+import { LiveBranchSection } from "./components/LiveBranchSection";
 
 function Toasts() {
 	const toasts = useToasts((s) => s.toasts);
@@ -106,12 +110,25 @@ function Review({ pr }: { pr: string }) {
 		}
 	};
 
+	const [checks, setChecks] = useState<CheckRun[] | null>(null);
+	const [liveBranch, setLiveBranch] = useState<LiveBranchStatus | null>(null);
+	const loadSide = () => {
+		void api.checks(pr).then(setChecks, () => {});
+		void api.liveBranch(pr).then(setLiveBranch, () => {});
+	};
+
 	useEffect(() => {
 		void load();
+		loadSide();
 		// Agents comment through the CLI while this page is open; poll the
-		// comment file so their findings appear without a reload.
+		// comment file so their findings appear without a reload. Checks and
+		// the live branch change on GitHub's clock, so they poll slowly.
 		const iv = setInterval(() => void api.comments(pr).then(setComments, () => {}), 2500);
-		return () => clearInterval(iv);
+		const slow = setInterval(loadSide, 45_000);
+		return () => {
+			clearInterval(iv);
+			clearInterval(slow);
+		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [pr]);
 
@@ -166,7 +183,11 @@ function Review({ pr }: { pr: string }) {
 					</span>
 				</span>
 				<span className={`state-chip ${chip.cls}`}>{chip.word}</span>
+				<span className="pr-branches mono" title={`${data.meta.headRefName} into ${data.meta.baseRefName}`}>
+					{data.meta.headRefName} → {data.meta.baseRefName}
+				</span>
 				<span className="spacer" />
+				<ActionsMenu pr={pr} onDone={() => void load(true)} />
 				<div className="seg">
 					{(["unified", "split"] as DiffView[]).map((v) => (
 						<button key={v} type="button" className={view === v ? "on" : ""} onClick={() => pickView(v)}>
@@ -202,6 +223,8 @@ function Review({ pr }: { pr: string }) {
 
 			<div className="main">
 				<aside className="side">
+					<ChecksSection checks={checks} />
+					<LiveBranchSection pr={pr} status={liveBranch} onChanged={loadSide} />
 					<div className="panel-label">
 						Files <span className="dim">{data.files.length}</span>
 					</div>

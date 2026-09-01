@@ -1,5 +1,7 @@
 import { create } from "zustand";
-import type { Comment, DiffFile, PrMeta, PrRef } from "../core/types";
+import type { LiveBranchStatus } from "../core/livebranch";
+import type { PrAction } from "../core/pr";
+import type { CheckRun, Comment, DiffFile, PrMeta, PrRef } from "../core/types";
 
 export interface PrPayload {
 	ref: PrRef;
@@ -34,6 +36,12 @@ export const api = {
 		j<Comment>(`/api/comments/${id}?pr=${encodeURIComponent(pr)}`, post(input, "PATCH")),
 	reply: (pr: string, id: string, input: object) =>
 		j<Comment>(`/api/comments/${id}/replies?pr=${encodeURIComponent(pr)}`, post(input)),
+	checks: (pr: string) => j<CheckRun[]>(`/api/pr/checks?pr=${encodeURIComponent(pr)}`),
+	action: (pr: string, action: PrAction) =>
+		j<{ ok: boolean }>(`/api/pr/action?pr=${encodeURIComponent(pr)}`, post({ action })),
+	liveBranch: (pr: string) => j<LiveBranchStatus>(`/api/pr/livebranch?pr=${encodeURIComponent(pr)}`),
+	liveBranchOp: (pr: string, op: "ensure" | "create" | "deploy" | "delete") =>
+		j<{ action?: string; posted?: boolean }>(`/api/pr/livebranch?pr=${encodeURIComponent(pr)}`, post({ op })),
 };
 
 /** The reviewer's name, kept in the browser; agents identify through the CLI. */

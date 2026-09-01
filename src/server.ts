@@ -1,5 +1,6 @@
 import index from "./client/index.html";
-import { fetchDiff, fetchMeta, parsePrRef } from "./core/pr";
+import { ensureLiveBranch, getLiveBranch, liveBranchCommand } from "./core/livebranch";
+import { fetchChecks, fetchDiff, fetchMeta, parsePrRef, runPrAction, type PrAction } from "./core/pr";
 import {
 	addComment,
 	editComment,
@@ -64,6 +65,48 @@ const server = Bun.serve({
 			} catch (error) {
 				return json({ error: error instanceof Error ? error.message : String(error) }, 502);
 			}
+		},
+
+		"/api/pr/checks": async (req) => {
+			try {
+				return json(await fetchChecks(refFromQuery(new URL(req.url))));
+			} catch (error) {
+				return json({ error: error instanceof Error ? error.message : String(error) }, 502);
+			}
+		},
+
+		"/api/pr/action": {
+			POST: async (req) => {
+				const ref = refFromQuery(new URL(req.url));
+				const b = await body<{ action: PrAction }>(req);
+				try {
+					await runPrAction(ref, b.action);
+					return json({ ok: true });
+				} catch (error) {
+					return json({ error: error instanceof Error ? error.message : String(error) }, 502);
+				}
+			},
+		},
+
+		"/api/pr/livebranch": {
+			GET: async (req) => {
+				try {
+					return json(await getLiveBranch(refFromQuery(new URL(req.url))));
+				} catch (error) {
+					return json({ error: error instanceof Error ? error.message : String(error) }, 502);
+				}
+			},
+			POST: async (req) => {
+				const ref = refFromQuery(new URL(req.url));
+				const b = await body<{ op: "ensure" | "create" | "deploy" | "delete" }>(req);
+				try {
+					if (b.op === "ensure") return json(await ensureLiveBranch(ref));
+					await liveBranchCommand(ref, b.op);
+					return json({ posted: true });
+				} catch (error) {
+					return json({ error: error instanceof Error ? error.message : String(error) }, 502);
+				}
+			},
 		},
 
 		"/api/comments": {

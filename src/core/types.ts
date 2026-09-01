@@ -52,6 +52,14 @@ export interface PrMeta {
 	changedFiles: number;
 }
 
+export interface CheckRun {
+	name: string;
+	workflow: string;
+	/** pass | fail | pending | skipping | cancel, GitHub's own buckets. */
+	bucket: string;
+	link: string;
+}
+
 export interface DiffLine {
 	type: "context" | "add" | "del";
 	old: number | null;

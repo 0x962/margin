@@ -73,6 +73,18 @@
 	color: var(--danger);
 	background: color-mix(in srgb, var(--danger) 12%, transparent);
 }
+.pr-branches {
+	font-size: 11px;
+	color: var(--text-faint);
+	max-width: 240px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.pr-actions {
+	display: inline-flex;
+	gap: 6px;
+}
 .head-stat {
 	font-size: 12px;
 	color: var(--text-dim);
@@ -246,6 +258,100 @@
 	color: var(--ok);
 }
 .file-delta .minus {
+	color: var(--danger);
+}
+
+/* ---------- checks + live branch ---------- */
+
+.checks {
+	display: flex;
+	flex-direction: column;
+	padding: 0 6px;
+}
+.check-row {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	padding: 3px 8px;
+	border-radius: 5px;
+	text-decoration: none;
+	color: var(--text);
+	font-size: 12px;
+	min-width: 0;
+}
+.check-row:hover {
+	background: var(--panel-2);
+}
+.check-dot {
+	flex: none;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+}
+.check-dot.pass {
+	background: var(--ok);
+}
+.check-dot.fail {
+	background: var(--danger);
+}
+.check-dot.pending {
+	background: var(--mark);
+	animation: soft-pulse 1.3s ease-in-out infinite;
+}
+.check-dot.skip {
+	background: var(--border-strong);
+}
+.check-name {
+	flex: 1;
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.check-word {
+	flex: none;
+	font-size: 10.5px;
+	color: var(--text-faint);
+}
+.fail-text {
+	color: var(--danger);
+	font-weight: 600;
+}
+@keyframes soft-pulse {
+	50% {
+		opacity: 0.35;
+	}
+}
+
+.lb {
+	padding: 0 14px 4px;
+	display: flex;
+	flex-direction: column;
+	gap: 7px;
+}
+.lb-state {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	font-size: 12px;
+}
+.lb-links {
+	display: flex;
+	gap: 12px;
+	font-size: 12px;
+}
+.lb-links a {
+	color: var(--accent);
+	text-decoration: none;
+}
+.lb-links a:hover {
+	text-decoration: underline;
+}
+.lb-actions {
+	display: flex;
+	gap: 6px;
+}
+.btn.danger {
 	color: var(--danger);
 }
 

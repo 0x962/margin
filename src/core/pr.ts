@@ -1,4 +1,4 @@
-import type { DiffFile, DiffHunk, DiffLine, PrMeta, PrRef } from "./types";
+import type { CheckRun, DiffFile, DiffHunk, DiffLine, PrMeta, PrRef } from "./types";
 import { prUrl } from "./store";
 
 /**
@@ -16,7 +16,7 @@ export function parsePrRef(input: string): PrRef | null {
 	return null;
 }
 
-async function gh(args: string[]): Promise<string> {
+export async function gh(args: string[]): Promise<string> {
 	const proc = Bun.spawn({ cmd: ["gh", ...args], stdout: "pipe", stderr: "pipe" });
 	const [out, err] = await Promise.all([
 		new Response(proc.stdout).text(),
@@ -40,6 +40,40 @@ export async function fetchMeta(ref: PrRef): Promise<PrMeta> {
 
 export async function fetchDiff(ref: PrRef): Promise<DiffFile[]> {
 	return parseDiff(await gh(["pr", "diff", prUrl(ref)]));
+}
+
+/**
+ * `gh pr checks` exits non-zero while any check is pending or failing; the
+ * JSON on stdout is still the answer, so the exit code is ignored when the
+ * output parses.
+ */
+export async function fetchChecks(ref: PrRef): Promise<CheckRun[]> {
+	const proc = Bun.spawn({
+		cmd: ["gh", "pr", "checks", prUrl(ref), "--json", "name,workflow,bucket,link"],
+		stdout: "pipe",
+		stderr: "pipe",
+	});
+	const [out, err] = await Promise.all([
+		new Response(proc.stdout).text(),
+		new Response(proc.stderr).text(),
+	]);
+	await proc.exited;
+	try {
+		return JSON.parse(out) as CheckRun[];
+	} catch {
+		// A PR with no checks configured prints a plain sentence instead.
+		if (/no checks/i.test(out + err)) return [];
+		throw new Error(err.trim() || "gh pr checks failed");
+	}
+}
+
+export type PrAction = "approve" | "merge" | "automerge";
+
+export async function runPrAction(ref: PrRef, action: PrAction): Promise<void> {
+	const url = prUrl(ref);
+	if (action === "approve") await gh(["pr", "review", url, "--approve"]);
+	else if (action === "merge") await gh(["pr", "merge", url, "--squash"]);
+	else await gh(["pr", "merge", url, "--squash", "--auto"]);
 }
 
 /** `git diff` quotes a path with special characters; strip the a/ or b/ prefix either way. */
