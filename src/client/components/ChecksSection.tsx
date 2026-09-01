@@ -13,9 +13,9 @@ export function checksSummary(checks: CheckRun[] | null) {
 }
 
 function StatusIcon({ bucket }: { bucket: string }) {
-	if (bucket === "fail" || bucket === "cancel") return <X size={15} className="ci-ico fail" />;
-	if (bucket === "pending") return <LoaderCircle size={15} className="ci-ico pending spin-slow" />;
-	return <Check size={15} className="ci-ico pass" />;
+	if (bucket === "fail" || bucket === "cancel") return <X size={13} className="ci-ico fail" />;
+	if (bucket === "pending") return <LoaderCircle size={13} className="ci-ico pending spin-slow" />;
+	return <Check size={13} className="ci-ico pass" />;
 }
 
 export function ChecksSection({ checks }: { checks: CheckRun[] | null }) {

@@ -1606,3 +1606,31 @@ a.lb-value:hover {
 	width: 6px;
 	height: 6px;
 }
+
+/* ---------- denser CI list ---------- */
+
+.ci-head {
+	padding: 8px 16px;
+	font-size: 12.5px;
+}
+.ci-row {
+	padding: 4px 16px;
+	font-size: 12.5px;
+	gap: 9px;
+}
+.ci-summary {
+	font-size: 12px;
+}
+
+/* ---------- centered topbar title ---------- */
+
+.topbar {
+	position: relative;
+}
+.pr-name.center {
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	max-width: 56vw;
+	justify-content: center;
+}

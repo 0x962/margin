@@ -93,14 +93,6 @@ function Landing() {
 	);
 }
 
-function stateChip(meta: PrPayload["meta"]): { word: string; cls: string } {
-	if (meta.isDraft) return { word: "Draft", cls: "draft" };
-	const s = meta.state.toLowerCase();
-	if (s === "open") return { word: "Open", cls: "open" };
-	if (s === "merged") return { word: "Merged", cls: "merged" };
-	return { word: "Closed", cls: "closed" };
-}
-
 type TabId = "changes" | "review" | "ci" | "conversation" | "live";
 
 const TAB_IDS: TabId[] = ["changes", "review", "ci", "conversation", "live"];
@@ -173,12 +165,25 @@ function Review({ pr }: { pr: string }) {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [pr, liveBranch?.supported, liveBranch?.enabled, liveBranch?.pod]);
 
-	// A host app embedding this page as a tab reads the document title;
-	// naming the tab after the PR is what makes those tabs manageable.
+	// A host app embedding this page as a tab reads the document title and
+	// favicon: the tab is the PR number, and the icon carries its status.
 	useEffect(() => {
-		if (data) document.title = `#${data.ref.number} ${data.meta.title}`;
+		if (!data) return;
+		document.title = `#${data.ref.number}`;
+		const state = data.meta.isDraft
+			? "#8a8f98"
+			: data.meta.state.toLowerCase() === "merged"
+				? "#a48ff0"
+				: data.meta.state.toLowerCase() === "open"
+					? "#22d39a"
+					: "#f16682";
+		const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${state}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="3"/><path d="M5 9v12"/><circle cx="19" cy="18" r="3"/><path d="M15 9l-3-3 3-3"/><path d="M12 6h4a3 3 0 0 1 3 3v6"/></svg>`;
+		const link = document.querySelector('link[rel="icon"]') as HTMLLinkElement | null;
+		const prev = link?.href ?? null;
+		if (link) link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
 		return () => {
 			document.title = "margin — local review";
+			if (link && prev) link.href = prev;
 		};
 	}, [data]);
 
@@ -208,7 +213,6 @@ function Review({ pr }: { pr: string }) {
 	}
 	if (!data) return <div className="page-loading">Loading the pull request…</div>;
 
-	const chip = stateChip(data.meta);
 	const open = comments.filter((c) => c.status === "open").length;
 	const ci = checksSummary(checks);
 	const conflicting = data.meta.mergeable === "CONFLICTING";
@@ -274,14 +278,12 @@ function Review({ pr }: { pr: string }) {
 					<span className="mark" />
 					margin
 				</a>
-				<span className="pr-name">
-					<GitPullRequestArrow size={14} className={`pr-state-ico ${chip.cls}`} />
+				<span className="pr-name center">
 					<b>#{data.ref.number}</b>
 					<span className="pr-title" title={data.meta.title}>
 						{data.meta.title}
 					</span>
 				</span>
-				<span className={`state-chip ${chip.cls}`}>{chip.word}</span>
 				<span className="spacer" />
 				<IdentityMenu />
 			</header>
@@ -383,7 +385,7 @@ function Review({ pr }: { pr: string }) {
 				</div>
 			)}
 
-			{tab === "review" && <ReviewTab pr={pr} />}
+			{tab === "review" && <ReviewTab pr={pr} repo={data.ref.repo} />}
 
 			{tab === "ci" && (
 				<div className="tabfull">
