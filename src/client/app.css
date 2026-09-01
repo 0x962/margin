@@ -1582,3 +1582,27 @@ a.lb-value {
 a.lb-value:hover {
 	text-decoration: underline;
 }
+
+/* ---------- denser tree ---------- */
+
+.tree-dir,
+.file-row {
+	height: 24px;
+	font-size: 12.5px;
+	gap: 6px;
+}
+.tree-section {
+	padding: 8px 10px 4px;
+	font-size: 12.5px;
+}
+.row-delta {
+	font-size: 11.5px;
+	min-width: 64px;
+}
+.row-mark {
+	font-size: 11.5px;
+}
+.tree-dot {
+	width: 6px;
+	height: 6px;
+}

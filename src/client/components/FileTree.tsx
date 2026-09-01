@@ -41,7 +41,7 @@ function FileIcon({ path }: { path: string }) {
 	}, [manifest]);
 	const base = path.split("/").pop() ?? "";
 	const icon = manifest ? iconFor(manifest, base) : "file";
-	return <img className="file-ico" src={`/file-icons/${icon}.svg`} width={15} height={15} alt="" />;
+	return <img className="file-ico" src={`/file-icons/${icon}.svg`} width={14} height={14} alt="" />;
 }
 
 const STATUS_LETTER: Record<DiffFile["status"], { letter: string; cls: string }> = {
@@ -55,8 +55,10 @@ function countFiles(dir: TreeDir): number {
 	return dir.files.length + dir.dirs.reduce((t, d) => t + countFiles(d), 0);
 }
 
-/** One indent step; a file row adds one more so its icon sits under its parent's text. */
-const STEP = 21;
+/** One indent step, kept shallow so deep trees stay on screen. */
+const STEP = 5;
+/** Files clear the chevron so their icons align under the parent's text. */
+const FILE_OFFSET = 20;
 
 /**
  * The changed files as the app's pane drew them: directory rows with their
@@ -133,7 +135,7 @@ export function FileTree({
 						type="button"
 						key={f.path}
 						className="file-row"
-						style={{ paddingLeft: 10 + depth * STEP + STEP }}
+						style={{ paddingLeft: 10 + depth * STEP + FILE_OFFSET }}
 						title={f.path}
 						onClick={() => onPick(f.path)}
 					>
