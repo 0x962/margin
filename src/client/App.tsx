@@ -293,7 +293,7 @@ function Review({ pr }: { pr: string }) {
 			)}
 
 			<div className="prheader">
-				<PrPicker number={data.ref.number} />
+				<PrPicker number={data.ref.number} state={data.meta.state} isDraft={data.meta.isDraft} />
 				{data.meta.state.toLowerCase() === "open" && (
 					<HeaderActions
 						pr={pr}

@@ -1,14 +1,30 @@
-import { ChevronDown, GitPullRequestArrow, Search } from "lucide-react";
+import {
+	ChevronDown,
+	GitMerge,
+	GitPullRequestArrow,
+	GitPullRequestClosed,
+	GitPullRequestDraft,
+	Search,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { api } from "../lib";
 
 type MyPr = { owner: string; repo: string; number: number; title: string; isDraft: boolean };
 
+/** The right glyph for a PR's state, GitHub's own iconography. */
+export function PrStateIcon({ state, isDraft, size = 13 }: { state: string; isDraft: boolean; size?: number }) {
+	if (isDraft) return <GitPullRequestDraft size={size} className="pr-state-ico draft" />;
+	const s = state.toLowerCase();
+	if (s === "merged") return <GitMerge size={size} className="pr-state-ico merged" />;
+	if (s === "closed") return <GitPullRequestClosed size={size} className="pr-state-ico closed" />;
+	return <GitPullRequestArrow size={size} className="pr-state-ico open" />;
+}
+
 /**
  * A switcher over the signed-in user's open pull requests: searchable,
  * grouped by repository, jumping between reviews with the active tab kept.
  */
-export function PrPicker({ number }: { number: number }) {
+export function PrPicker({ number, state, isDraft }: { number: number; state: string; isDraft: boolean }) {
 	const [open, setOpen] = useState(false);
 	const [prs, setPrs] = useState<MyPr[] | null>(null);
 	const [query, setQuery] = useState("");
@@ -40,7 +56,7 @@ export function PrPicker({ number }: { number: number }) {
 	return (
 		<div className="overflow-wrap">
 			<button type="button" className="btn pr-pick" onClick={openMenu}>
-				<GitPullRequestArrow size={13} className="pr-state-ico open" />
+				<PrStateIcon state={state} isDraft={isDraft} />
 				#{number}
 				<ChevronDown size={12} className="pr-pick-chev" />
 			</button>
@@ -69,10 +85,7 @@ export function PrPicker({ number }: { number: number }) {
 										className={`pr-pick-row ${p.number === number ? "on" : ""}`}
 										href={`/https://github.com/${p.owner}/${p.repo}/pull/${p.number}${location.hash}`}
 									>
-										<GitPullRequestArrow
-											size={13}
-											className={`pr-state-ico ${p.isDraft ? "draft" : "open"}`}
-										/>
+										<PrStateIcon state="open" isDraft={p.isDraft} />
 										<span className="pr-pick-name mono">#{p.number}</span>
 										<span className="pr-pick-title">{p.title}</span>
 									</a>
