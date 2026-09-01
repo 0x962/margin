@@ -1,17 +1,22 @@
 # margin
 
-Local review comments on GitHub pull requests, for humans and agents.
+The local review surface for GitHub pull requests, for humans and agents.
 GitHub stays clean for people; agent findings live here, on your machine,
-as plain files.
+as plain files. The viewer also carries the PR's checks, approve and merge
+actions, and Canary's Live Branch controls, all through `gh`.
 
 ## The pieces
 
 - **Viewer** (`bun dev`, then `http://localhost:4519/<github-pr-url>`): the
   path is the PR. The page fetches the PR's title and diff through `gh`,
-  renders a syntax-highlighted diff per file, and shows every local comment
-  inline on its anchor line. Click a line to comment; reply, resolve,
-  reopen, and edit in place. The left rail lists files and threads. The
-  landing page at `/` lists every PR with local comments.
+  renders a syntax-highlighted diff per file (unified or split), and shows
+  every local comment inline on its anchor line. Click a line to comment;
+  reply, resolve, reopen, and edit in place. The left rail nests the
+  changed files as a tree and lists the PR's checks; Approve, Merge, and
+  Auto-merge sit in the topbar. On canary-repository PRs a Live Branch
+  section shows the dev pod's state and URLs and drives the workflow's
+  label and slash commands. The landing page at `/` lists every PR with
+  local comments.
 - **CLI** (`margin`): the same store, for terminals and agents.
 
   ```
