@@ -26,6 +26,7 @@ import { FileTree } from "./components/FileTree";
 import { HeaderActions } from "./components/HeaderActions";
 import { IdentityMenu } from "./components/IdentityMenu";
 import { LiveBranchSection } from "./components/LiveBranchSection";
+import { PrPicker } from "./components/PrPicker";
 import { ReviewTab } from "./components/ReviewTab";
 
 function Toasts() {
@@ -266,13 +267,7 @@ function Review({ pr }: { pr: string }) {
 					<span className="mark" />
 					margin
 				</a>
-				<span className="pr-name">
-					<GitPullRequestArrow size={14} className={`pr-state-ico ${chip.cls}`} />
-					<b>#{data.ref.number}</b>
-					<span className="pr-title" title={data.meta.title}>
-						{data.meta.title}
-					</span>
-				</span>
+				<PrPicker number={data.ref.number} title={data.meta.title} stateCls={chip.cls} />
 				<span className={`state-chip ${chip.cls}`}>{chip.word}</span>
 				<span className="spacer" />
 				<IdentityMenu />

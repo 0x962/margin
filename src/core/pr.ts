@@ -130,6 +130,36 @@ export async function setAutoDeploy(ref: PrRef, enabled: boolean): Promise<void>
 	]);
 }
 
+/** The signed-in user's open pull requests, for the title switcher. */
+export async function fetchMyOpenPrs(): Promise<
+	Array<{ owner: string; repo: string; number: number; title: string; isDraft: boolean }>
+> {
+	const raw = await gh([
+		"search",
+		"prs",
+		"--author",
+		"@me",
+		"--state",
+		"open",
+		"--limit",
+		"30",
+		"--sort",
+		"updated",
+		"--json",
+		"number,title,repository,isDraft",
+	]);
+	const rows = JSON.parse(raw) as Array<{
+		number: number;
+		title: string;
+		isDraft: boolean;
+		repository: { nameWithOwner: string };
+	}>;
+	return rows.map((r) => {
+		const [owner, repo] = r.repository.nameWithOwner.split("/");
+		return { owner, repo, number: r.number, title: r.title, isDraft: r.isDraft };
+	});
+}
+
 export interface ConversationEntry {
 	author: string;
 	createdAt: string;

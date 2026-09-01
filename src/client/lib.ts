@@ -43,6 +43,10 @@ export const api = {
 		),
 	action: (pr: string, action: PrAction) =>
 		j<{ ok: boolean }>(`/api/pr/action?pr=${encodeURIComponent(pr)}`, post({ action })),
+	myPrs: () =>
+		j<Array<{ owner: string; repo: string; number: number; title: string; isDraft: boolean }>>(
+			"/api/my-prs",
+		),
 	autoDeploy: (pr: string) =>
 		j<{ available: boolean; enabled: boolean }>(`/api/pr/autodeploy?pr=${encodeURIComponent(pr)}`),
 	setAutoDeploy: (pr: string, enabled: boolean) =>

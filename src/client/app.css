@@ -1217,8 +1217,12 @@ table.diff {
 .tree-section {
 	display: flex;
 	align-items: center;
+	justify-content: flex-start;
+	text-align: left;
 	gap: 7px;
 	width: 100%;
+	appearance: none;
+	-webkit-appearance: none;
 	border: 0;
 	background: none;
 	color: var(--text);
@@ -1278,8 +1282,11 @@ table.diff {
 	line-height: 13px;
 }
 .file-name {
-	flex: none;
-	max-width: 60%;
+	flex: 0 1 auto;
+	min-width: 2ch;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 .file-name.st-added {
 	color: #63c983;
@@ -1314,4 +1321,96 @@ table.diff {
 }
 .file-delta {
 	font-variant-numeric: tabular-nums;
+}
+
+/* Embedded in a narrow host pane, the tree gives the diff room back. */
+@media (max-width: 900px) {
+	.side {
+		width: 240px;
+	}
+	.pr-branches {
+		display: none;
+	}
+}
+
+/* ---------- black diff surface + PR switcher + tree spacing ---------- */
+
+.dfile {
+	background: var(--bg);
+	border-color: #1a1c20;
+	box-shadow: none;
+}
+.dfile-head {
+	background: var(--bg);
+	border-bottom-color: #17181b;
+}
+.diff .hunk,
+.hunk-row .num {
+	background: #0d0e10;
+}
+.anchor-cell {
+	background: #0b0c0e;
+	border-color: #17181b;
+}
+
+.tree-sep {
+	margin: 0 3px;
+}
+.tree-dir,
+.file-row {
+	gap: 7px;
+}
+
+.pr-pick {
+	border: 0;
+	background: none;
+	cursor: pointer;
+	color: var(--text);
+	padding: 4px 8px;
+	border-radius: 8px;
+	font-size: 12.5px;
+}
+.pr-pick:hover {
+	background: #131417;
+}
+.pr-pick-chev {
+	color: var(--text-faint);
+}
+.pr-pick-menu {
+	left: 0;
+	right: auto;
+	top: 34px;
+	min-width: 420px;
+	max-width: 560px;
+	max-height: 60vh;
+	overflow-y: auto;
+}
+.pr-pick-row {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	padding: 8px 10px;
+	border-radius: var(--radius);
+	color: var(--text);
+	text-decoration: none;
+	font-size: 12.5px;
+	min-width: 0;
+}
+.pr-pick-row:hover {
+	background: var(--panel-2);
+}
+.pr-pick-row.on {
+	background: var(--accent-soft);
+}
+.pr-pick-name {
+	flex: none;
+	color: var(--text-dim);
+	font-size: 11.5px;
+}
+.pr-pick-title {
+	flex: 1;
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }

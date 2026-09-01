@@ -93,7 +93,7 @@ export function FileTree({
 				<button
 					type="button"
 					className="tree-dir"
-					style={{ paddingLeft: 10 + depth * 16 }}
+					style={{ paddingLeft: 10 + depth * 12 }}
 					onClick={() => toggle(dir.path)}
 				>
 					{isClosed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
@@ -120,7 +120,7 @@ export function FileTree({
 						type="button"
 						key={f.path}
 						className="file-row"
-						style={{ paddingLeft: 10 + depth * 16 + 16 }}
+						style={{ paddingLeft: 10 + depth * 12 + 14 }}
 						title={f.path}
 						onClick={() => onPick(f.path)}
 					>

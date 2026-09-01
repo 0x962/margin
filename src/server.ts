@@ -5,6 +5,7 @@ import {
 	fetchConversation,
 	fetchDiff,
 	fetchMeta,
+	fetchMyOpenPrs,
 	getAutoDeploy,
 	parsePrRef,
 	runPrAction,
@@ -63,8 +64,18 @@ function who(input: { author?: string; session?: string }): Identity {
 const server = Bun.serve({
 	port: PORT,
 	idleTimeout: 120,
+	// Dev-mode asset serving: bundles go out uncacheable, so an embedding
+	// webview never pins a stale stylesheet to a fresh script.
+	development: { hmr: false },
 	routes: {
 		"/api/prs": async () => json(await listPrs()),
+		"/api/my-prs": async () => {
+			try {
+				return json(await fetchMyOpenPrs());
+			} catch (error) {
+				return json({ error: error instanceof Error ? error.message : String(error) }, 502);
+			}
+		},
 
 		"/api/pr": async (req) => {
 			const url = new URL(req.url);
