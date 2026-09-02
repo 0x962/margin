@@ -3,9 +3,11 @@ import {
 	ChevronDown,
 	Clock,
 	GitMerge,
+	ListOrdered,
 	LoaderCircle,
 	Square,
 	SquareCheck,
+	XCircle,
 } from "lucide-react";
 import { useState } from "react";
 import type { PrAction } from "../../core/pr";
@@ -43,6 +45,7 @@ export function HeaderActions({
 	} | null>(null);
 
 	const autoMergeArmed = !!meta.autoMergeRequest;
+	const queued = !!meta.mergeQueueEntry;
 
 	const openMenu = () => {
 		setOpen(!open);
@@ -70,6 +73,15 @@ export function HeaderActions({
 				onPatch({ state: "MERGED" });
 				onMerged();
 				toast(action === "admin-merge" ? "Merged (admin)" : "Merged");
+			} else if (action === "queue") {
+				onPatch({ mergeQueueEntry: { position: null } });
+				toast("Added to the merge queue");
+			} else if (action === "dequeue") {
+				onPatch({ mergeQueueEntry: null });
+				toast("Removed from the merge queue");
+			} else if (action === "close") {
+				onPatch({ state: "CLOSED" });
+				toast("Closed");
 			} else if (action === "automerge") {
 				onPatch({ autoMergeRequest: { enabledAt: new Date().toISOString() } });
 				toast("Auto-merge armed");
@@ -112,6 +124,20 @@ export function HeaderActions({
 		<>
 			<LoaderCircle size={13} className="spin" /> Merging…
 		</>
+	) : busy === "queue" || busy === "dequeue" ? (
+		<>
+			<LoaderCircle size={13} className="spin" /> Queue…
+		</>
+	) : busy === "close" ? (
+		<>
+			<LoaderCircle size={13} className="spin" /> Closing…
+		</>
+	) : queued ? (
+		<>
+			<ListOrdered size={13} /> In merge queue
+			{typeof meta.mergeQueueEntry?.position === "number" && ` #${meta.mergeQueueEntry.position}`}{" "}
+			<ChevronDown size={12} />
+		</>
 	) : busy === "automerge" || busy === "disable-automerge" ? (
 		<>
 			<LoaderCircle size={13} className="spin" /> Auto-merge…
@@ -148,7 +174,7 @@ export function HeaderActions({
 				<div className="overflow-wrap">
 					<button
 						type="button"
-						className={`btn ${meta.isDraft ? "" : "light"} ${autoMergeArmed ? "armed" : ""}`}
+						className={`btn ${meta.isDraft ? "" : "light"} ${autoMergeArmed || queued ? "armed" : ""}`}
 						disabled={busy !== null}
 						onClick={openMenu}
 					>
@@ -187,9 +213,22 @@ export function HeaderActions({
 										<Clock size={13} /> {sure("automerge", "Auto-merge when green")}
 									</button>
 								)}
+								{queued ? (
+									<button type="button" onClick={() => void fire("dequeue", true)}>
+										<ListOrdered size={13} /> {sure("dequeue", "Leave the merge queue")}
+									</button>
+								) : (
+									<button type="button" onClick={() => void fire("queue", true)}>
+										<ListOrdered size={13} /> {sure("queue", "Add to merge queue")}
+									</button>
+								)}
 								<div className="menu-sep" />
 								<button type="button" onClick={() => void fire("approve", true)}>
 									<Check size={13} /> {sure("approve", "Approve")}
+								</button>
+								<div className="menu-sep" />
+								<button type="button" className="danger" onClick={() => void fire("close", true)}>
+									<XCircle size={13} /> {sure("close", "Close pull request")}
 								</button>
 							</div>
 						</>

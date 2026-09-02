@@ -183,7 +183,9 @@ function Review({ pr }: { pr: string }) {
 
 	// While auto-merge is armed, GitHub merges on its own clock; watch the
 	// meta so the header flips to Merged without a manual refresh.
-	const autoMergeArmed = !!data?.meta.autoMergeRequest && data.meta.state.toLowerCase() === "open";
+	const autoMergeArmed =
+		!!(data?.meta.autoMergeRequest || data?.meta.mergeQueueEntry) &&
+		data.meta.state.toLowerCase() === "open";
 	useEffect(() => {
 		if (!autoMergeArmed) return;
 		const iv = setInterval(() => {
@@ -331,6 +333,22 @@ function Review({ pr }: { pr: string }) {
 				</div>
 			)}
 
+			{data.meta.stack && (
+				<div className="stack-strip">
+					<span className="stack-label">Stack</span>
+					{data.meta.stack.map((e) => (
+						<a
+							key={e.number}
+							className={`stack-pill ${e.state.toLowerCase()}${e.current ? " on" : ""}`}
+							href={`/${e.url}`}
+							title={e.title}
+						>
+							{e.state === "MERGED" ? "✓" : e.state === "CLOSED" ? "✕" : e.isDraft ? "◌" : "○"}{" "}
+							#{e.number} <span className="stack-title">{e.title}</span>
+						</a>
+					))}
+				</div>
+			)}
 			<div className="prheader">
 				<PrPicker number={data.ref.number} state={data.meta.state} isDraft={data.meta.isDraft} />
 				{data.meta.state.toLowerCase() === "open" ? (

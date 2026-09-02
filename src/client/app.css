@@ -1735,3 +1735,15 @@ a.lb-value:hover {
 .menu-pop .menu-check {
 	white-space: nowrap;
 }
+
+/* The gh stack strip under the PR header. */
+.stack-strip { display:flex; align-items:center; gap:8px; padding:6px 16px; border-bottom:1px solid var(--line); font-size:12px; overflow-x:auto; }
+.stack-label { color:var(--dim); font-weight:600; letter-spacing:.04em; text-transform:uppercase; font-size:10px; }
+.stack-pill { display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border:1px solid var(--line); border-radius:99px; color:var(--dim); text-decoration:none; white-space:nowrap; }
+.stack-pill:hover { color:var(--fg); border-color:var(--fg-dim, var(--dim)); }
+.stack-pill.on { color:var(--fg); border-color:#5a7ff0; background:color-mix(in srgb, #5a7ff0 12%, transparent); }
+.stack-pill.merged { color:#a48ff0; }
+.stack-pill.closed { color:#f16682; }
+.stack-title { max-width:200px; overflow:hidden; text-overflow:ellipsis; }
+.menu-pop .danger { color:#f79fb1; }
+.menu-pop .danger:hover { background:color-mix(in srgb, #f16682 18%, transparent); }

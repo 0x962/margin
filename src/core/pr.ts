@@ -1,4 +1,4 @@
-import type { CheckRun, DiffFile, DiffHunk, DiffLine, PrMeta, PrRef } from "./types";
+import type { CheckRun, DiffFile, DiffHunk, DiffLine, PrMeta, PrRef, StackEntry } from "./types";
 import { prUrl } from "./store";
 
 /**
@@ -26,16 +26,66 @@ export async function gh(args: string[]): Promise<string> {
 	return out;
 }
 
+/**
+ * `gh pr view --json` has no field for the merge queue or for gh stacks;
+ * both come from one GraphQL query beside it.
+ */
+const STACK_QUERY = `query($owner:String!,$repo:String!,$num:Int!){
+	repository(owner:$owner,name:$repo){ pullRequest(number:$num){
+		mergeQueueEntry { position enqueuedAt }
+		stack { entries(first:50){ nodes {
+			position pullRequest { number title state url isDraft }
+		} } }
+	} } }`;
+
+interface StackNode {
+	position: number;
+	pullRequest: { number: number; title: string; state: string; url: string; isDraft: boolean };
+}
+
 export async function fetchMeta(ref: PrRef): Promise<PrMeta> {
-	const raw = await gh([
-		"pr",
-		"view",
-		prUrl(ref),
-		"--json",
-		"title,state,isDraft,author,headRefName,baseRefName,additions,deletions,changedFiles,mergeable,autoMergeRequest",
+	const [raw, graphRaw] = await Promise.all([
+		gh([
+			"pr",
+			"view",
+			prUrl(ref),
+			"--json",
+			"title,state,isDraft,author,headRefName,baseRefName,additions,deletions,changedFiles,mergeable,autoMergeRequest",
+		]),
+		gh([
+			"api",
+			"graphql",
+			"-f",
+			`query=${STACK_QUERY}`,
+			"-f",
+			`owner=${ref.owner}`,
+			"-f",
+			`repo=${ref.repo}`,
+			"-F",
+			`num=${ref.number}`,
+		]),
 	]);
 	const d = JSON.parse(raw) as Omit<PrMeta, "author"> & { author: { login: string } };
-	return { ...d, author: d.author?.login ?? "" };
+	const g = JSON.parse(graphRaw).data.repository.pullRequest as {
+		mergeQueueEntry: PrMeta["mergeQueueEntry"];
+		stack: { entries: { nodes: StackNode[] } } | null;
+	};
+	const nodes = g.stack?.entries.nodes ?? [];
+	const stack: StackEntry[] | null =
+		nodes.length > 0
+			? nodes
+					.map((n) => ({
+						position: n.position,
+						number: n.pullRequest.number,
+						title: n.pullRequest.title,
+						state: n.pullRequest.state,
+						isDraft: n.pullRequest.isDraft,
+						url: n.pullRequest.url,
+						current: n.pullRequest.number === ref.number,
+					}))
+					.sort((a, b) => a.position - b.position)
+			: null;
+	return { ...d, author: d.author?.login ?? "", mergeQueueEntry: g.mergeQueueEntry, stack };
 }
 
 export async function fetchDiff(ref: PrRef): Promise<DiffFile[]> {
@@ -73,8 +123,23 @@ export type PrAction =
 	| "admin-merge"
 	| "automerge"
 	| "disable-automerge"
+	| "queue"
+	| "dequeue"
+	| "close"
 	| "ready"
 	| "update-branch";
+
+async function queueMutation(ref: PrRef, mutation: "enqueuePullRequest" | "dequeuePullRequest"): Promise<void> {
+	const { id } = JSON.parse(await gh(["pr", "view", prUrl(ref), "--json", "id"])) as { id: string };
+	await gh([
+		"api",
+		"graphql",
+		"-f",
+		`query=mutation($id:ID!){ ${mutation}(input:{pullRequestId:$id}){ clientMutationId } }`,
+		"-f",
+		`id=${id}`,
+	]);
+}
 
 export async function runPrAction(ref: PrRef, action: PrAction): Promise<void> {
 	const url = prUrl(ref);
@@ -84,6 +149,9 @@ export async function runPrAction(ref: PrRef, action: PrAction): Promise<void> {
 	else if (action === "admin-merge") await gh(["pr", "merge", url, "--squash", "--admin"]);
 	else if (action === "automerge") await gh(["pr", "merge", url, "--squash", "--auto"]);
 	else if (action === "disable-automerge") await gh(["pr", "merge", url, "--disable-auto"]);
+	else if (action === "queue") await queueMutation(ref, "enqueuePullRequest");
+	else if (action === "dequeue") await queueMutation(ref, "dequeuePullRequest");
+	else if (action === "close") await gh(["pr", "close", url]);
 	else if (action === "ready") await gh(["pr", "ready", url]);
 	else await gh(["pr", "update-branch", url]);
 }

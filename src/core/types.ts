@@ -54,6 +54,23 @@ export interface PrMeta {
 	mergeable: string;
 	/** Set while auto-merge is armed on GitHub; null otherwise. */
 	autoMergeRequest: { enabledAt?: string } | null;
+	/** Set while the PR sits in the repository's merge queue; null otherwise. */
+	mergeQueueEntry: { position: number | null; enqueuedAt?: string } | null;
+	/** The gh stack this PR belongs to, base first; null when unstacked. */
+	stack: StackEntry[] | null;
+}
+
+/** One PR in a gh stack, as the stack strip renders it. */
+export interface StackEntry {
+	position: number;
+	number: number;
+	title: string;
+	/** OPEN | MERGED | CLOSED, GitHub's own words. */
+	state: string;
+	isDraft: boolean;
+	url: string;
+	/** True for the PR the page shows. */
+	current: boolean;
 }
 
 export interface CheckRun {
