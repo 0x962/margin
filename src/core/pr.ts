@@ -32,7 +32,7 @@ export async function fetchMeta(ref: PrRef): Promise<PrMeta> {
 		"view",
 		prUrl(ref),
 		"--json",
-		"title,state,isDraft,author,headRefName,baseRefName,additions,deletions,changedFiles,mergeable",
+		"title,state,isDraft,author,headRefName,baseRefName,additions,deletions,changedFiles,mergeable,autoMergeRequest",
 	]);
 	const d = JSON.parse(raw) as Omit<PrMeta, "author"> & { author: { login: string } };
 	return { ...d, author: d.author?.login ?? "" };
@@ -72,6 +72,7 @@ export type PrAction =
 	| "merge"
 	| "admin-merge"
 	| "automerge"
+	| "disable-automerge"
 	| "ready"
 	| "update-branch";
 
@@ -82,6 +83,7 @@ export async function runPrAction(ref: PrRef, action: PrAction): Promise<void> {
 	// Bypasses branch protection; only an admin on the repository may do it.
 	else if (action === "admin-merge") await gh(["pr", "merge", url, "--squash", "--admin"]);
 	else if (action === "automerge") await gh(["pr", "merge", url, "--squash", "--auto"]);
+	else if (action === "disable-automerge") await gh(["pr", "merge", url, "--disable-auto"]);
 	else if (action === "ready") await gh(["pr", "ready", url]);
 	else await gh(["pr", "update-branch", url]);
 }

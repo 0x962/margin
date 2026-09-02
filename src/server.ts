@@ -153,6 +153,16 @@ const server = Bun.serve({
 			}
 		},
 
+		"/api/pr/meta": async (req) => {
+			try {
+				const ref = refFromQuery(new URL(req.url));
+				metaCache.delete(prKey(ref));
+				return json(await loadMeta(ref));
+			} catch (error) {
+				return json({ error: error instanceof Error ? error.message : String(error) }, 502);
+			}
+		},
+
 		"/api/pr/conversation": async (req) => {
 			try {
 				return json(await fetchConversation(refFromQuery(new URL(req.url))));
@@ -175,6 +185,10 @@ const server = Bun.serve({
 				const b = await body<{ action: PrAction }>(req);
 				try {
 					await runPrAction(ref, b.action);
+					// The action just changed the PR's state on GitHub; a cached
+					// meta would keep the page and the favicon on the old state.
+					prCache.delete(prKey(ref));
+					metaCache.delete(prKey(ref));
 					return json({ ok: true });
 				} catch (error) {
 					return json({ error: error instanceof Error ? error.message : String(error) }, 502);

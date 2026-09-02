@@ -39,6 +39,7 @@ export const api = {
 	reply: (pr: string, id: string, input: object) =>
 		j<Comment>(`/api/comments/${id}/replies?pr=${encodeURIComponent(pr)}`, post(input)),
 	checks: (pr: string) => j<CheckRun[]>(`/api/pr/checks?pr=${encodeURIComponent(pr)}`),
+	meta: (pr: string) => j<PrMeta>(`/api/pr/meta?pr=${encodeURIComponent(pr)}`),
 	conversation: (pr: string) =>
 		j<{ body: string; entries: ConversationEntry[] }>(
 			`/api/pr/conversation?pr=${encodeURIComponent(pr)}`,

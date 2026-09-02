@@ -16,7 +16,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { LiveBranchStatus } from "../core/livebranch";
 import type { ConversationEntry } from "../core/pr";
 import { parsePrRef } from "../core/pr";
-import type { CheckRun, Comment } from "../core/types";
+import type { CheckRun, Comment, PrMeta } from "../core/types";
 import { api, timeAgo, useIdentity, useToasts, type PrPayload } from "./lib";
 import { ChecksSection, checksSummary } from "./components/ChecksSection";
 import { ConversationTab } from "./components/ConversationTab";
@@ -133,6 +133,30 @@ function Review({ pr }: { pr: string }) {
 		}
 	};
 
+	const patchMeta = (patch: Partial<PrMeta>) => {
+		setData((d) => (d ? { ...d, meta: { ...d.meta, ...patch } } : d));
+	};
+
+	// A merge was just requested. The page already shows merged; poll GitHub
+	// until it agrees before overwriting local state, so a refetch that races
+	// the merge cannot flip the page back to open.
+	const confirmMerged = async () => {
+		for (let i = 0; i < 6; i++) {
+			try {
+				const m = await api.meta(pr);
+				if (m.state.toLowerCase() !== "open") {
+					patchMeta(m);
+					void load(true);
+					return;
+				}
+			} catch {
+				// gh hiccup; keep polling
+			}
+			await new Promise((r) => setTimeout(r, 1500));
+		}
+		void load(true);
+	};
+
 	const [checks, setChecks] = useState<CheckRun[] | null>(null);
 	const [liveBranch, setLiveBranch] = useState<LiveBranchStatus | null>(null);
 	const [conversation, setConversation] = useState<{ body: string; entries: ConversationEntry[] } | null>(null);
@@ -156,6 +180,21 @@ function Review({ pr }: { pr: string }) {
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [pr]);
+
+	// While auto-merge is armed, GitHub merges on its own clock; watch the
+	// meta so the header flips to Merged without a manual refresh.
+	const autoMergeArmed = !!data?.meta.autoMergeRequest && data.meta.state.toLowerCase() === "open";
+	useEffect(() => {
+		if (!autoMergeArmed) return;
+		const iv = setInterval(() => {
+			void api.meta(pr).then((m) => {
+				patchMeta(m);
+				if (m.state.toLowerCase() !== "open") void load(true);
+			}, () => {});
+		}, 10_000);
+		return () => clearInterval(iv);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [autoMergeArmed, pr]);
 
 	// The pod claim finishes within a minute, so the wait state polls fast.
 	useEffect(() => {
@@ -294,13 +333,18 @@ function Review({ pr }: { pr: string }) {
 
 			<div className="prheader">
 				<PrPicker number={data.ref.number} state={data.meta.state} isDraft={data.meta.isDraft} />
-				{data.meta.state.toLowerCase() === "open" && (
+				{data.meta.state.toLowerCase() === "open" ? (
 					<HeaderActions
 						pr={pr}
-						isDraft={data.meta.isDraft}
+						meta={data.meta}
 						conflicting={conflicting}
-						onDone={() => void load(true)}
+						onPatch={patchMeta}
+						onMerged={() => void confirmMerged()}
 					/>
+				) : (
+					<span className={`btn state-pill ${data.meta.state.toLowerCase()}`}>
+						<GitMerge size={13} /> {data.meta.state.toLowerCase() === "merged" ? "Merged" : "Closed"}
+					</span>
 				)}
 				<span className="spacer" />
 				{tab === "changes" && (

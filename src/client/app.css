@@ -1692,3 +1692,46 @@ a.lb-value:hover {
 	color: var(--ok);
 	border-color: color-mix(in srgb, var(--ok) 45%, var(--border));
 }
+
+/* ── merge menu rework: checkboxes, armed face, state pill ─────────────── */
+.menu-pop .menu-check {
+	color: var(--fg-muted, #8a8f98);
+}
+.menu-pop .menu-check svg {
+	color: var(--accent, #1c91fa);
+}
+.menu-pop .check-hint {
+	margin-left: auto;
+	font-size: 10px;
+	opacity: 0.55;
+	padding-left: 12px;
+}
+.deploy-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: #fab541;
+	display: inline-block;
+	margin: 0 1px;
+}
+.btn.armed {
+	background: color-mix(in srgb, #1c91fa 18%, transparent);
+	border-color: color-mix(in srgb, #1c91fa 45%, transparent);
+	color: #7cbcf7;
+}
+.btn.state-pill {
+	pointer-events: none;
+}
+.btn.state-pill.merged {
+	background: color-mix(in srgb, #a48ff0 20%, transparent);
+	border-color: color-mix(in srgb, #a48ff0 45%, transparent);
+	color: #c4b5fd;
+}
+.btn.state-pill.closed {
+	background: color-mix(in srgb, #f16682 16%, transparent);
+	border-color: color-mix(in srgb, #f16682 40%, transparent);
+	color: #f79fb1;
+}
+.menu-pop .menu-check {
+	white-space: nowrap;
+}

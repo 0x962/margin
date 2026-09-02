@@ -52,6 +52,8 @@ export interface PrMeta {
 	changedFiles: number;
 	/** MERGEABLE | CONFLICTING | UNKNOWN, GitHub's own words. */
 	mergeable: string;
+	/** Set while auto-merge is armed on GitHub; null otherwise. */
+	autoMergeRequest: { enabledAt?: string } | null;
 }
 
 export interface CheckRun {
