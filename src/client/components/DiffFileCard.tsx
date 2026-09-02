@@ -84,9 +84,9 @@ export function DiffFileCard({
 	const submitAt = async (at: Anchor, body: string) => {
 		let name = author;
 		if (!name) {
-			name = window.prompt("Your name (shown on the comment):")?.trim() ?? "";
+			name = (await api.whoami().catch(() => ({ author: "" }))).author;
 			if (!name) {
-				toast("A comment needs a name", "error");
+				toast("A comment needs a name; set one in the top-right menu", "error");
 				return;
 			}
 			setAuthor(name);

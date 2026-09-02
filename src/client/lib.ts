@@ -57,9 +57,16 @@ export const api = {
 	liveBranch: (pr: string) => j<LiveBranchStatus>(`/api/pr/livebranch?pr=${encodeURIComponent(pr)}`),
 	liveBranchOp: (pr: string, op: "ensure" | "create" | "deploy" | "delete") =>
 		j<{ action?: string; posted?: boolean }>(`/api/pr/livebranch?pr=${encodeURIComponent(pr)}`, post({ op })),
+	whoami: () => j<{ author: string }>("/api/whoami"),
 };
 
-/** The reviewer's name, kept in the browser; agents identify through the CLI. */
+/**
+ * The reviewer's name. A name the person typed is kept in the browser; a
+ * browser without one gets the machine's default from /api/whoami (git
+ * config user.name, else the OS username), so a comment never needs a
+ * dialog. Electron panes have no window.prompt, which is why the default
+ * must come from the server.
+ */
 export const useIdentity = create<{ author: string; set: (name: string) => void }>((set) => ({
 	author: localStorage.getItem("margin:author") ?? "",
 	set: (author) => {
@@ -67,6 +74,17 @@ export const useIdentity = create<{ author: string; set: (name: string) => void 
 		set({ author });
 	},
 }));
+
+if (!localStorage.getItem("margin:author")) {
+	void api
+		.whoami()
+		.then((d) => {
+			if (d.author && !useIdentity.getState().author) {
+				useIdentity.setState({ author: d.author });
+			}
+		})
+		.catch(() => {});
+}
 
 export function timeAgo(iso: string): string {
 	const s = (Date.now() - Date.parse(iso)) / 1000;

@@ -1,3 +1,4 @@
+import { userInfo } from "node:os";
 import { generateManifest } from "material-icon-theme";
 import index from "./client/index.html";
 import { ensureLiveBranch, getLiveBranch, liveBranchCommand } from "./core/livebranch";
@@ -153,6 +154,12 @@ const server = Bun.serve({
 			}
 		},
 
+		"/api/whoami": async () => {
+			const proc = Bun.spawn({ cmd: ["git", "config", "user.name"], stdout: "pipe", stderr: "ignore" });
+			const fromGit = (await new Response(proc.stdout).text()).trim();
+			await proc.exited;
+			return Response.json({ author: fromGit || userInfo().username });
+		},
 		"/api/pr/meta": async (req) => {
 			try {
 				const ref = refFromQuery(new URL(req.url));
