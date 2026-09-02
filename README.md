@@ -1,64 +1,71 @@
 # margin
 
-The local review surface for GitHub pull requests, for humans and agents.
-GitHub stays clean for people; agent findings live here, on your machine,
-as plain files. The viewer also carries the PR's checks, approve and merge
-actions, and Canary's Live Branch controls, all through `gh`.
+Local review comments for GitHub pull requests, for humans and agents.
+Agents post their findings here, on your machine, as plain files. GitHub
+stays clean for people.
 
-## The pieces
+## What it is
 
-- **Viewer** (`bun dev`, then `http://localhost:4519/<github-pr-url>`): the
-  path is the PR. The page fetches the PR's title and diff through `gh`,
-  renders a syntax-highlighted diff per file (unified or split), and shows
-  every local comment inline on its anchor line. Click a line to comment;
-  reply, resolve, reopen, and edit in place. The left rail nests the
-  changed files as a tree and lists the PR's checks; Approve, Merge, and
-  Auto-merge sit in the topbar. On canary-repository PRs a Live Branch
-  section shows the dev pod's state and URLs and drives the workflow's
-  label and slash commands. The landing page at `/` lists every PR with
-  local comments.
-- **CLI** (`margin`): the same store, for terminals and agents.
+margin has two parts:
 
-  ```
-  margin open <pr>                 print the local review URL
-  margin list <pr> [--all]         read comments (JSON when piped)
-  margin add <pr> --path <file> --line <n> --body <text>
-  margin reply <comment-id> --body <text>
-  margin edit <comment-id> --body <text>
-  margin resolve <comment-id>
-  margin reopen <comment-id>
-  margin prs                       every PR with local comments
-  ```
+- A web viewer. The path is the PR: open
+  `http://localhost:4519/<github-pr-url>` and the page shows the diff, the
+  checks, the merge actions, and every local comment inline on its line.
+- A CLI (`margin`). The CLI reads and writes the same comments from a
+  terminal or an agent.
 
-  `<pr>` is a GitHub PR URL or `owner/repo#123`. `--body -` reads stdin.
-- **Identity**: every comment and reply carries an author. Humans default
-  to `git config user.name` (the web UI remembers a name per browser).
-  An agent passes `--author <its-name>` and `--session <id>` (default:
-  `$CLAUDE_SESSION_ID`), so each finding points back to the session that
-  wrote it — copy the session id in the UI and `claude --resume` it.
+The comments live in one JSON file per PR, under
+`~/.margin/comments/<owner>__<repo>__<n>.json`. There is no database. The
+comments never leave your machine.
 
-## Storage
+## Requirements
 
-One JSON file per PR under `~/.margin/comments/<owner>__<repo>__<n>.json`.
-Plain files: the CLI and the server never fight, and an agent can read the
-store directly. `MARGIN_HOME` moves it; `MARGIN_PORT` moves the server
-(default 4519).
+- [Bun](https://bun.sh)
+- The [`gh`](https://cli.github.com) CLI, signed in for the repositories
+  that you review
 
-## Install
+## Run
 
-```sh
-bun install
-bun link        # puts `margin` on PATH for profile-sourcing shells
-bun dev         # serves http://localhost:4519
+1. Install the dependencies: `bun install`.
+2. Start the server: `bun dev`. The server listens on port 4519.
+3. Open `http://localhost:4519/<github-pr-url>` in a browser.
+4. Optional: run `bun link` to put `margin` on PATH.
+
+The landing page at `/` lists every PR that has local comments.
+
+## The viewer
+
+The page renders a syntax-highlighted diff per file, unified or split.
+Click a line to write a comment. Reply, resolve, reopen, and edit in
+place. The left rail shows the changed files as a tree and lists the PR's
+checks. The top bar holds Approve, Merge, and Auto-merge, which run
+through `gh`.
+
+## The CLI
+
+```
+margin open <pr>                 print the local review URL
+margin list <pr> [--all]         read comments (JSON when piped)
+margin add <pr> --path <file> --line <n> --body <text>
+margin reply <comment-id> --body <text>
+margin edit <comment-id> --body <text>
+margin resolve <comment-id>
+margin reopen <comment-id>
+margin prs                       every PR with local comments
 ```
 
-Agents launched by Canary DE run without a shell profile, so they resolve
-`margin` through a shim in `~/.golemapp/bin` (the directory every DE
-terminal has on PATH):
+`<pr>` is a GitHub PR URL or `owner/repo#123`. `--body -` reads stdin.
 
-```sh
-printf '#!/bin/sh\nexec /opt/homebrew/bin/bun %s/src/cli.ts "$@"\n' "$PWD" > ~/.golemapp/bin/margin
-chmod +x ~/.golemapp/bin/margin
-```
+## Identity
 
-Needs `gh` signed in for the repositories you review.
+Every comment carries an author. A human gets the name from
+`git config user.name`, and the web UI remembers a name per browser. An
+agent passes `--author <its-name>` and `--session <id>` (default:
+`$CLAUDE_SESSION_ID`). Each finding then points back to the agent session
+that wrote it: copy the session id in the UI and resume the session with
+`claude --resume`.
+
+## Configuration
+
+- `MARGIN_HOME` moves the comment store (default: `~/.margin`).
+- `MARGIN_PORT` moves the server (default: 4519).
