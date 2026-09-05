@@ -5,12 +5,12 @@ import { imageFetchUrl, imageSource } from "./core/image";
 import { ensureLiveBranch, getLiveBranch, liveBranchCommand } from "./core/livebranch";
 import {
 	fetchChecks,
-	gh,
 	fetchConversation,
 	fetchDiff,
 	fetchMeta,
 	fetchMyOpenPrs,
 	getAutoDeploy,
+	gh,
 	parsePrRef,
 	resolveReviewCwd,
 	runPrAction,
