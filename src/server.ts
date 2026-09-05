@@ -1,9 +1,11 @@
 import { userInfo } from "node:os";
 import { generateManifest } from "material-icon-theme";
 import index from "./client/index.html";
+import { imageFetchUrl, imageSource } from "./core/image";
 import { ensureLiveBranch, getLiveBranch, liveBranchCommand } from "./core/livebranch";
 import {
 	fetchChecks,
+	gh,
 	fetchConversation,
 	fetchDiff,
 	fetchMeta,
@@ -34,6 +36,26 @@ const PORT = Number(process.env.MARGIN_PORT ?? 4519);
 /** The diff and title change rarely while a review is open; one minute is fresh enough. */
 const CACHE_MS = 60_000;
 const prCache = new Map<string, { at: number; meta: PrMeta; files: DiffFile[]; cwd: string | null }>();
+
+/** A screenshot on a pull request keeps the bytes it was pushed with, so an hour is safe. */
+const IMAGE_CACHE_MS = 3_600_000;
+const imageCache = new Map<string, { at: number; bytes: ArrayBuffer; type: string }>();
+
+/**
+ * `gh auth token` prints the person's GitHub token. It is the same token for
+ * the life of the process, so margin asks the `gh` command once.
+ */
+let ghToken: Promise<string> | null = null;
+function githubToken(): Promise<string> {
+	ghToken ??= gh(["auth", "token"]).then((t) => t.trim());
+	return ghToken;
+}
+
+function imageResponse(entry: { bytes: ArrayBuffer; type: string }): Response {
+	return new Response(entry.bytes, {
+		headers: { "content-type": entry.type, "cache-control": "max-age=3600" },
+	});
+}
 
 /** Meta alone, for the favicon route: cheap enough to keep separately fresh. */
 const metaCache = new Map<string, { at: number; meta: PrMeta }>();
@@ -135,6 +157,28 @@ const server = Bun.serve({
 				headers: { "content-type": "image/svg+xml", "cache-control": "max-age=3600" },
 			});
 		},
+		// A picture in a pull request body sits behind a GitHub login. The
+		// browser cannot send that login to another site, so margin fetches
+		// the file with the person's GitHub token and answers the bytes here.
+		// src/core/image.ts holds the hosts and paths this route accepts.
+		"/api/image": async (req) => {
+			const source = imageSource(new URL(req.url).searchParams.get("url") ?? "");
+			if (!source) return new Response("not a GitHub image address", { status: 400 });
+			const hit = imageCache.get(source.href);
+			if (hit && Date.now() - hit.at < IMAGE_CACHE_MS) return imageResponse(hit);
+			const res = await fetch(imageFetchUrl(source), {
+				headers: { authorization: `Bearer ${await githubToken()}`, accept: "image/*" },
+			});
+			if (!res.ok) return new Response(`GitHub answered ${res.status}`, { status: 502 });
+			const type = res.headers.get("content-type") ?? "";
+			// A login page comes back as HTML with status 200. Answering it as
+			// an image would make this route a way to read any GitHub page.
+			if (!type.startsWith("image/")) return new Response(`GitHub sent ${type || "no type"}`, { status: 502 });
+			const entry = { at: Date.now(), bytes: await res.arrayBuffer(), type };
+			imageCache.set(source.href, entry);
+			return imageResponse(entry);
+		},
+
 		"/api/my-prs": async () => {
 			try {
 				return json(await fetchMyOpenPrs());

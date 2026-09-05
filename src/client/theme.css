@@ -394,6 +394,13 @@ textarea.input:focus {
 .md a {
 	color: var(--accent);
 }
+/* A screenshot in a pull request body is wider than the review panel. */
+.md img {
+	max-width: 100%;
+	height: auto;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+}
 .md blockquote {
 	margin: 0.45em 0;
 	padding: 2px 10px;
